@@ -1,3 +1,4 @@
 __pycache__
-drivers
 .idea
+dist
+src/tekrsa_api_ntia.egg-info
