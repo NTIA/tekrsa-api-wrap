@@ -4,17 +4,12 @@ from os import mkdir
 import rsa_api
 from time import sleep
 import numpy as np
+import sys
 
 """
-This is a test for the entire API Wrapper for the Tektronix RSA306B.
+This is a test for the entire API Wrapper.
 It requires a compatible RSA device to be connected.
-
-The location for libcyusb_shared.so and libRSA_API.so must also be
-specified in TEST_SO_DIR below before use. By default this is set to
-the scos-sensor drivers directory.
 """
-
-TEST_SO_DIR = './drivers/'
 
 class rsa_api_test(unittest.TestCase):
     """Test for rsa306b_api.py"""
@@ -23,20 +18,20 @@ class rsa_api_test(unittest.TestCase):
 
     def test_ALIGN_GetAlignmentNeeded(self):
         self.assertIsInstance(rsa.ALIGN_GetAlignmentNeeded(), bool)
-    
+
     def test_ALIGN_GetWarmupStatus(self):
         self.assertIsInstance(rsa.ALIGN_GetWarmupStatus(), bool)
-    
+
     def test_ALIGN_RunAlignment(self):
         self.assertIsNone(rsa.ALIGN_RunAlignment())
 
     """CONFIG Command Testing"""
-    
+
     def test_CONFIG_CenterFreq(self):
         cf = 2.4453e9
         self.assertIsNone(rsa.CONFIG_SetCenterFreq(cf))
         self.assertEqual(rsa.CONFIG_GetCenterFreq(), cf)
-        
+
         self.assertRaises(TypeError, rsa.CONFIG_SetCenterFreq, 'abc')
         self.assertRaises(TypeError, rsa.CONFIG_SetCenterFreq, False)
         self.assertRaises(ValueError, rsa.CONFIG_SetCenterFreq, 400e9)
@@ -60,14 +55,13 @@ class rsa_api_test(unittest.TestCase):
         self.assertIsNone(rsa.CONFIG_SetFrequencyReferenceSource('INTERNAL'))
         self.assertIsInstance(rsa.CONFIG_GetFrequencyReferenceSource(), str)
 
-
     def test_CONFIG_Preset(self):
         self.assertIsNone(rsa.CONFIG_Preset())
         self.assertEqual(rsa.CONFIG_GetCenterFreq(), 1.5e9)
         self.assertEqual(rsa.CONFIG_GetReferenceLevel(), 0)
         self.assertEqual(rsa.IQBLK_GetIQBandwidth(), 40e6)
         self.assertEqual(rsa.IQBLK_GetIQRecordLength(), 1024)
-    
+
     def test_CONFIG_ReferenceLevel(self):
         refLevel = 17
         self.assertIsNone(rsa.CONFIG_SetReferenceLevel(refLevel))
@@ -75,14 +69,52 @@ class rsa_api_test(unittest.TestCase):
         self.assertRaises(TypeError, rsa.CONFIG_SetReferenceLevel, 'abc')
         self.assertRaises(ValueError, rsa.CONFIG_SetReferenceLevel, 31)
         self.assertRaises(ValueError, rsa.CONFIG_SetReferenceLevel, -131)
-    
+
     def test_CONFIG_GetMaxCenterFreq(self):
-        maxCf = 6.2e9
+        global device
+        maxCf = 0
+        if device in ['RSA306B', 'RSA306']:
+            # Unsure if RSA306 (non-B variant) has same max freq.
+            maxCf = 6.2e9
+        elif device == 'RSA503A':
+            maxCf = 3.0e9
+        elif device == 'RSA507A':
+            maxCf = 7.5e9
+        elif device == 'RSA513A':
+            maxCf = 13.6e9
+        elif device == 'RSA518A':
+            maxCf = 18.0e9
         self.assertEqual(rsa.CONFIG_GetMaxCenterFreq(), maxCf)
-    
+
     def test_CONFIG_GetMinCenterFreq(self):
         minCf = 9e3
         self.assertEqual(rsa.CONFIG_GetMinCenterFreq(), minCf)
+
+    def test_CONFIG_Attenuation(self):
+        # Only run test for RSA 500A/600A devices
+        global device
+        if device not in ['RSA306B', 'RSA306']:
+            self.assertIsNone(rsa.CONFIG_SetAutoAttenuationEnable(True))
+            self.assertTrue(rsa.CONFIG_GetAutoAttenuationEnable())
+            self.assertIsNone(rsa.CONFIG_SetAutoAttenuationEnable(False))
+            self.assertFalse(rsa.CONFIG_GetAutoAttenuationEnable())
+            atten_setting = -25
+            self.assertIsNone(rsa.CONFIG_SetRFAttenuator(atten_setting))
+            self.assertEqual(rsa.CONFIG_GetRFAttenuator(), atten_setting)
+
+    def test_CONFIG_Preamp(self):
+        # Only run test for RSA 500A/600A devices.
+        global device
+        if device != ('RSA306B' or 'RSA306'):
+            self.assertIsNone(rsa.CONFIG_SetRFPreampEnable(False))
+            rsa.DEVICE_Stop()
+            rsa.CONFIG_SetAutoAttenuationEnable(True)
+            rsa.DEVICE_Run()
+            self.assertFalse(rsa.CONFIG_GetRFPreampEnable())
+            self.assertIsNone(rsa.CONFIG_SetRFPreampEnable(True))
+            rsa.DEVICE_Stop()
+            rsa.DEVICE_Run()
+            self.assertTrue(rsa.CONFIG_GetRFPreampEnable())
 
     """DEVICE Command Testing"""
 
@@ -96,15 +128,15 @@ class rsa_api_test(unittest.TestCase):
 
     def test_DEVICE_PrepareForRun(self):
         self.assertIsNone(rsa.DEVICE_PrepareForRun())
-    
+
     def test_DEVICE_Run(self):
         self.assertIsNone(rsa.DEVICE_Run())
         self.assertTrue(rsa.DEVICE_GetEnable())
-    
+
     def test_DEVICE_Stop(self):
         self.assertIsNone(rsa.DEVICE_Stop())
         self.assertFalse(rsa.DEVICE_GetEnable())
-    
+
     def test_DEVICE_GetEventStatus_no_signal(self):
         eventType = ['OVERRANGE', 'TRIGGER', '1PPS']
         for e in eventType:
@@ -113,7 +145,7 @@ class rsa_api_test(unittest.TestCase):
             self.assertEqual(timestamp, 0)
         self.assertRaises(TypeError, rsa.DEVICE_GetEventStatus, 0)
         self.assertRaises(rsa_api.RSAError, rsa.DEVICE_GetEventStatus, 'abc')
-    
+
     def test_DEVICE_GetEventStatus_trig_event(self):
         rsa.DEVICE_Run()
         rsa.TRIG_ForceTrigger()
@@ -121,9 +153,9 @@ class rsa_api_test(unittest.TestCase):
         trig, trigTs = rsa.DEVICE_GetEventStatus('TRIGGER')
         self.assertTrue(trig)
         self.assertGreater(trigTs, 0)
-    
+
     """
-    # The following test woudl require an actual overrange event.
+    # The following test would require an actual overrange event.
     def test_DEVICE_GetEventStatus_overrange(self):
         pass
     """
@@ -132,8 +164,8 @@ class rsa_api_test(unittest.TestCase):
         self.assertIsInstance(rsa.DEVICE_GetOverTemperatureStatus(), bool)
         self.assertEqual(rsa.DEVICE_GetOverTemperatureStatus(), False)
 
-    def test_DEVICE_GetNomenclature_rsa306b(self):
-        self.assertEqual(rsa.DEVICE_GetNomenclature(), 'RSA306B')
+    def test_DEVICE_GetNomenclature(self):
+        self.assertIsInstance(rsa.DEVICE_GetNomenclature(), str)
 
     def test_DEVICE_GetSerialNumber(self):
         sn = rsa.DEVICE_GetSerialNumber()
@@ -145,13 +177,13 @@ class rsa_api_test(unittest.TestCase):
         self.assertEqual(rsa.DEVICE_GetAPIVersion(), '1.0.0014')
 
     def test_DEVICE_GetFWVersion(self):
-        self.assertEqual(rsa.DEVICE_GetFWVersion(), 'V1.7')
+        self.assertIsInstance(rsa.DEVICE_GetFWVersion(), str)
 
     def test_DEVICE_GetFPGAVersion(self):
-        self.assertEqual(rsa.DEVICE_GetFPGAVersion(), 'V2.1')
+        self.assertIsInstance(rsa.DEVICE_GetFPGAVersion(), str)
 
     def test_DEVICE_GetHWVersion(self):
-        self.assertEqual(rsa.DEVICE_GetHWVersion(), 'V7')
+        self.assertIsInstance(rsa.DEVICE_GetHWVersion(), str)
 
     def test_DEVICE_GetInfo(self):
         info = rsa.DEVICE_GetInfo()
@@ -159,21 +191,21 @@ class rsa_api_test(unittest.TestCase):
         self.assertEqual(len(info), 6)
         self.assertEqual(len(info['serialNum']), 7)
         self.assertEqual(info['apiVersion'], '1.0.0014')
-        self.assertEqual(info['fwVersion'], 'V1.7')
-        self.assertEqual(info['fpgaVersion'], 'V2.1')
-        self.assertEqual(info['hwVersion'], 'V7')
+        self.assertIsInstance(info['fwVersion'], str)
+        self.assertIsInstance(info['fpgaVersion'], str)
+        self.assertIsInstance(info['hwVersion'], str)
 
     """IQBLK Command Testing"""
-    
+
     def test_IQBLK_MinMaxIQBandwidth(self):
         maxBw = rsa.IQBLK_GetMaxIQBandwidth()
         minBw = rsa.IQBLK_GetMinIQBandwidth()
-        rsa.IQBLK_SetIQBandwidth(maxBw) # To get maxRl properly
+        rsa.IQBLK_SetIQBandwidth(maxBw)  # To get maxRl properly
         maxRl = rsa.IQBLK_GetMaxIQRecordLength()
         self.assertEqual(maxBw, 40e6)
         self.assertEqual(minBw, 100)
         self.assertEqual(maxRl, 126000000)
-    
+
     def test_IQBLK_IQBandwidth(self):
         iqBw = 20e6
         self.assertIsNone(rsa.IQBLK_SetIQBandwidth(iqBw))
@@ -181,7 +213,7 @@ class rsa_api_test(unittest.TestCase):
         self.assertRaises(ValueError, rsa.IQBLK_SetIQBandwidth, neg)
         self.assertRaises(ValueError, rsa.IQBLK_SetIQBandwidth, 100e6)
         self.assertRaises(TypeError, rsa.IQBLK_SetIQBandwidth, 'abc')
-    
+
     def test_IQBLK_IQRecordLength(self):
         iqRl = 8192
         self.assertIsNone(rsa.IQBLK_SetIQRecordLength(iqRl))
@@ -192,26 +224,26 @@ class rsa_api_test(unittest.TestCase):
 
     def test_IQBLK_GetSampleRate(self):
         self.assertIsInstance(rsa.IQBLK_GetIQSampleRate(), float)
-    
+
     def test_IQBLK_GetIQData(self):
         rl = 1000
-        rsa.IQBLK_Configure() # Configure to defaults
+        rsa.IQBLK_Configure()  # Configure to defaults
         i, q = rsa.IQBLK_Acquire(rl, 10)
         self.assertEqual(len(i), rl)
         self.assertEqual(len(q), rl)
-        
+
         self.assertRaises(ValueError, rsa.IQBLK_Acquire, rec_len=neg)
         self.assertRaises(ValueError, rsa.IQBLK_Acquire, rec_len=200000000)
         self.assertRaises(TypeError, rsa.IQBLK_Acquire, rec_len='abc')
 
     """IQSTREAM Command Testing"""
-    
+
     def test_IQSTREAM_MinMaxIQBandwidth(self):
         minBandwidthHz = rsa.IQSTREAM_GetMinAcqBandwidth()
         maxBandwidthHz = rsa.IQSTREAM_GetMaxAcqBandwidth()
         self.assertEqual(minBandwidthHz, 9765.625)
         self.assertEqual(maxBandwidthHz, 40e6)
-    
+
     def test_IQSTREAM_AcqBandwidth(self):
         bwHz_req = [40e6, 20e6, 10e6, 5e6, 2.5e6, 1.25e6, 625e3, 312.5e3,
                     156.25e3, 78125, 39062.5, 19531.25, 9765.625]
@@ -227,15 +259,15 @@ class rsa_api_test(unittest.TestCase):
             self.assertEqual(srSps, s)
             self.assertIsNone(rsa.IQSTREAM_SetIQDataBufferSize(r))
             self.assertEqual(rsa.IQSTREAM_GetIQDataBufferSize(), r)
-        
+
         self.assertRaises(TypeError, rsa.IQSTREAM_SetAcqBandwidth, 'abc')
         self.assertRaises(TypeError, rsa.IQSTREAM_SetAcqBandwidth, [num])
         self.assertRaises(ValueError, rsa.IQSTREAM_SetAcqBandwidth, 41e6)
-    
+
     def test_IQSTREAM_SetOutputConfiguration(self):
         dest = ['CLIENT', 'FILE_TIQ', 'FILE_SIQ', 'FILE_SIQ_SPLIT']
         dtype = ['SINGLE', 'INT32', 'INT16', 'SINGLE_SCALE_INT32']
-        
+
         for d in dest:
             for t in dtype:
                 if d == 'FILE_TIQ' and 'SINGLE' in t:
@@ -243,7 +275,7 @@ class rsa_api_test(unittest.TestCase):
                                       rsa.IQSTREAM_SetOutputConfiguration, d, t)
                 else:
                     self.assertIsNone(rsa.IQSTREAM_SetOutputConfiguration(d, t))
-        
+
         self.assertRaises(TypeError, rsa.IQSTREAM_SetOutputConfiguration,
                           num, dtype[0])
         self.assertRaises(TypeError, rsa.IQSTREAM_SetOutputConfiguration,
@@ -258,63 +290,63 @@ class rsa_api_test(unittest.TestCase):
         filename = 'iqstream_test'
         filenameBase = path + filename
         self.assertIsNone(rsa.IQSTREAM_SetDiskFilenameBase(filenameBase))
-        
+
         self.assertRaises(TypeError, rsa.IQSTREAM_SetDiskFilenameBase, num)
         self.assertRaises(TypeError, rsa.IQSTREAM_SetDiskFilenameBase, b'abc')
         self.assertRaises(TypeError, rsa.IQSTREAM_SetDiskFilenameBase, [num])
-    
+
     def test_IQSTREAM_SetDiskFilenameSuffix(self):
         suffixCtl = [0, -1, -2]
         for s in suffixCtl:
             self.assertIsNone(rsa.IQSTREAM_SetDiskFilenameSuffix(s))
-        
+
         self.assertRaises(TypeError, rsa.IQSTREAM_SetDiskFilenameSuffix, 'abc')
         self.assertRaises(ValueError, rsa.IQSTREAM_SetDiskFilenameSuffix, neg)
-    
+
     def test_IQSTREAM_SetDiskFileLength(self):
         length = 100
         self.assertIsNone(rsa.IQSTREAM_SetDiskFileLength(length))
         self.assertRaises(TypeError, rsa.IQSTREAM_SetDiskFileLength, 'abc')
         self.assertRaises(ValueError, rsa.IQSTREAM_SetDiskFileLength, neg)
-    
+
     def test_IQSTREAM_Operation(self):
         rsa.IQSTREAM_SetAcqBandwidth(5e6)
         rsa.IQSTREAM_SetOutputConfiguration('CLIENT', 'INT16')
         rsa.IQSTREAM_GetAcqParameters()
         rsa.DEVICE_Run()
-        
+
         self.assertIsNone(rsa.IQSTREAM_Start())
         self.assertTrue(rsa.IQSTREAM_GetEnable())
-        
+
         self.assertIsNone(rsa.IQSTREAM_Stop())
         self.assertFalse(rsa.IQSTREAM_GetEnable())
-        
+
         rsa.DEVICE_Stop()
-    
+
     def test_IQSTREAM_ClearAcqStatus(self):
         self.assertIsNone(rsa.IQSTREAM_ClearAcqStatus())
 
     """TRIG Command Testing"""
-    
+
     def test_TRIG_TriggerMode(self):
         mode = ["freeRun", "triggered"]
         for m in mode:
             self.assertIsNone(rsa.TRIG_SetTriggerMode(m))
             self.assertEqual(rsa.TRIG_GetTriggerMode(), m)
-    
+
     def test_TRIG_TriggerSource(self):
         source = ["External", "IFPowerLevel"]
         for s in source:
             self.assertIsNone(rsa.TRIG_SetTriggerSource(s))
             self.assertEqual(rsa.TRIG_GetTriggerSource(), s)
-    
+
     def test_TRIG_TriggerTransition(self):
         trans = ["LH", "HL", "Either"]
         for t in trans:
             self.assertIsNone(rsa.TRIG_SetTriggerTransition(t))
             self.assertEqual(rsa.TRIG_GetTriggerTransition(), t)
         self.assertRaises(TypeError, rsa.TRIG_SetTriggerTransition, 0)
-    
+
     def test_TRIG_IFPowerTriggerLevel(self):
         trigLevel = -10
         self.assertIsNone(rsa.TRIG_SetIFPowerTriggerLevel(trigLevel))
@@ -322,30 +354,30 @@ class rsa_api_test(unittest.TestCase):
         self.assertRaises(TypeError, rsa.TRIG_SetIFPowerTriggerLevel, 'trigger')
         self.assertRaises(ValueError, rsa.TRIG_SetIFPowerTriggerLevel, 31)
         self.assertRaises(ValueError, rsa.TRIG_SetIFPowerTriggerLevel, -131)
-    
+
     def test_TRIG_TriggerPositionPercent(self):
         self.assertRaises(ValueError, rsa.TRIG_SetTriggerPositionPercent, 0.5)
         self.assertRaises(ValueError, rsa.TRIG_SetTriggerPositionPercent, 100)
         self.assertRaises(TypeError, rsa.TRIG_SetTriggerPositionPercent, 'abc')
-        
+
         pos = 20
         self.assertIsNone(rsa.TRIG_SetTriggerPositionPercent(pos))
         self.assertEqual(rsa.TRIG_GetTriggerPositionPercent(), pos)
-    
+
     def test_TRIG_ForceTrigger(self):
         self.assertIsNone(rsa.TRIG_ForceTrigger())
-    
+
     """SPECTRUM Command Testing"""
-    
+
     def test_SPECTRUM_Enable(self):
         enable = [False, True]
         for e in enable:
             self.assertIsNone(rsa.SPECTRUM_SetEnable(e))
             self.assertEqual(rsa.SPECTRUM_GetEnable(), e)
-    
+
     def test_SPECTRUM_Settings(self):
         self.assertIsNone(rsa.SPECTRUM_SetDefault())
-        
+
         span = 20e6
         rbw = 100e3
         enableVBW = True
@@ -366,11 +398,11 @@ class rsa_api_test(unittest.TestCase):
         self.assertEqual(settings['window'], window)
         self.assertEqual(settings['traceLength'], traceLength)
         self.assertEqual(settings['verticalUnit'], verticalUnit)
-        
+
         self.assertRaises(TypeError, rsa.SPECTRUM_SetSettings, 'span', 'rbw',
                           'enableVBW', 'vbw', 'traceLength',
                           1, 0)
-    
+
     def test_SPECTRUM_TraceType(self):
         trace = 'Trace2'
         enable = True
@@ -379,18 +411,30 @@ class rsa_api_test(unittest.TestCase):
         o_enable, o_detector = rsa.SPECTRUM_GetTraceType(trace)
         self.assertEqual(enable, o_enable)
         self.assertEqual(detector, o_detector)
-        
+
         self.assertRaises(rsa_api.RSAError, rsa.SPECTRUM_SetTraceType, trace='abc')
         self.assertRaises(TypeError, rsa.SPECTRUM_SetTraceType, trace=40e5)
         self.assertRaises(rsa_api.RSAError, rsa.SPECTRUM_SetTraceType,
                           detector='abc')
         self.assertRaises(TypeError, rsa.SPECTRUM_SetTraceType, detector=40e5)
-    
+
     def test_SPECTRUM_GetLimits(self):
+        global device
+        if device in ['RSA306B', 'RSA306']:
+            maxSpan = 6.2e9
+        elif device == 'RSA503A':
+            maxSpan = 3.0e9
+        elif device == 'RSA507A':
+            maxSpan = 7.5e9
+        elif device == 'RSA513A':
+            maxSpan = 13.6e9
+        elif device == 'RSA518A':
+            maxSpan = 18.0e9
+
         limits = rsa.SPECTRUM_GetLimits()
         self.assertIsInstance(limits, dict)
         self.assertEqual(len(limits), 8)
-        self.assertEqual(limits['maxSpan'], 6.2e9)
+        self.assertEqual(limits['maxSpan'], maxSpan)
         self.assertEqual(limits['minSpan'], 1e3)
         self.assertEqual(limits['maxRBW'], 10e6)
         self.assertEqual(limits['minRBW'], 10)
@@ -398,7 +442,7 @@ class rsa_api_test(unittest.TestCase):
         self.assertEqual(limits['minVBW'], 1)
         self.assertEqual(limits['maxTraceLength'], 64001)
         self.assertEqual(limits['minTraceLength'], 801)
-    
+
     def test_SPECTRUM_Acquire(self):
         rsa.SPECTRUM_SetEnable(True)
         span = 20e6
@@ -409,29 +453,31 @@ class rsa_api_test(unittest.TestCase):
         window = 'Hann'
         verticalUnit = 'dBm'
         rsa.SPECTRUM_SetSettings(span, rbw, enableVBW, vbw, traceLength, window,
-                                verticalUnit)
+                                 verticalUnit)
         spectrum, outTracePoints = rsa.SPECTRUM_Acquire(trace='Trace1',
-                                       trace_points=traceLength)
+                                                        trace_points=traceLength)
         self.assertEqual(len(spectrum), traceLength)
         self.assertIsInstance(spectrum, np.ndarray)
         self.assertRaises(TypeError, rsa.SPECTRUM_Acquire, trace=1)
-        
+
         traceInfo = rsa.SPECTRUM_GetTraceInfo()
         self.assertIsInstance(traceInfo, dict)
         self.assertEqual(len(traceInfo), 2)
 
+
 if __name__ == '__main__':
-    """There must be a connected RSA 306B in order to test."""
+    """There must be a connected RSA device in order to test."""
+    TEST_SO_DIR = sys.argv[1]
+    del sys.argv[1:]
     rsa = rsa_api.RSA(so_dir=TEST_SO_DIR)
     rsa.DEVICE_Connect(0)
-    if rsa.DEVICE_GetNomenclature() != 'RSA306B':
-        raise Exception('Incorrect RSA model, please connect RSA306B')
-    
+    device = rsa.DEVICE_GetNomenclature()
+
     # Some values used in testing
     num = 400
     neg = -400
     unittest.main()
-    
+
     # Test cleanup
     rsa.DEVICE_Stop()
     rsa.DEVICE_Disconnect()

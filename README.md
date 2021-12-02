@@ -78,15 +78,15 @@ Known issues exist in the underlying Tektronix RSA API for Linux. This wrapper i
 
 ## Running Tests
 
-Testing files are included in the `tests` directory for RSA306B and RSA507A devices. These tests use `unittest` to test the devices' supported API functions. Running a test requires the RSA device to be connected.
+A testing file is included in the `tests` directory of this repository. The test uses `unittest` to test supported API functions. Running a test requires an RSA device to be connected. The same test is used for any supported RSA device, with some tests being enabled, disabled, or modified as needed depending on the device's specific supported API functions. For example, tests of the preamp configuration are not run when testing with an RSA which does not have a preamp.
 
-Run the test, with segmentation fault handling, by running:
+From the top level directory of this repository, run the test, with segmentation fault handling, by running:
 
-`python3 -q -X faulthandler <rsa>_api_test.py <path-to-shared-objects>`
+`python3 -q -X faulthandler tests/rsa_api_test.py <path-to-shared-objects>`
 
-Replacing `<rsa>` with either `rsa306b` or `rsa507a`, depending on your device, and `<path-to-shared-objects>` with the path to a directory containing both `libRSA_API.so` and `libcyusb_shared.so`.
+Replacing `<path-to-shared-objects>` with the path to a directory containing both `libRSA_API.so` and `libcyusb_shared.so`.
 
-This testing code was been adapted from the [Tektronix Cython RSA API testing code for the 306B](https://github.com/tektronix/RSA_API/blob/master/Python/Cython%20Version/test_rsa306b.py) and [for the 500A/600A series devices](https://github.com/tektronix/RSA_API/blob/master/Python/Cython%20Version/test_rsa500-600.py). In addition to adapting this code to work with this API wrapper, various tests were also added which were not present in the original versions.
+This testing code was been adapted from the [Tektronix Cython RSA API testing code for the 306B](https://github.com/tektronix/RSA_API/blob/master/Python/Cython%20Version/test_rsa306b.py) and [for the 500A/600A series devices](https://github.com/tektronix/RSA_API/blob/master/Python/Cython%20Version/test_rsa500-600.py). In addition to adapting this code to work with this API wrapper, various tests were also added which were not present in the original versions, and the test was made to be universal for all supported RSA devices.
 
 ## Contact
 
