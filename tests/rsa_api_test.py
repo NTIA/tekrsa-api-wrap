@@ -76,9 +76,9 @@ class rsa_api_test(unittest.TestCase):
         if device in ['RSA306B', 'RSA306']:
             # Unsure if RSA306 (non-B variant) has same max freq.
             maxCf = 6.2e9
-        elif device == 'RSA503A':
+        elif device in ['RSA503A', 'RSA603A']:
             maxCf = 3.0e9
-        elif device == 'RSA507A':
+        elif device in ['RSA507A', 'RSA607A']:
             maxCf = 7.5e9
         elif device == 'RSA513A':
             maxCf = 13.6e9
@@ -105,7 +105,7 @@ class rsa_api_test(unittest.TestCase):
     def test_CONFIG_Preamp(self):
         # Only run test for RSA 500A/600A devices.
         global device
-        if device != ('RSA306B' or 'RSA306'):
+        if device not in ['RSA306B', 'RSA306']:
             self.assertIsNone(rsa.CONFIG_SetRFPreampEnable(False))
             rsa.DEVICE_Stop()
             rsa.CONFIG_SetAutoAttenuationEnable(True)
@@ -422,9 +422,9 @@ class rsa_api_test(unittest.TestCase):
         global device
         if device in ['RSA306B', 'RSA306']:
             maxSpan = 6.2e9
-        elif device == 'RSA503A':
+        elif device in ['RSA503A', 'RSA603A']:
             maxSpan = 3.0e9
-        elif device == 'RSA507A':
+        elif device in ['RSA507A', 'RSA607A']:
             maxSpan = 7.5e9
         elif device == 'RSA513A':
             maxSpan = 13.6e9
