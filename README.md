@@ -13,7 +13,7 @@ First, download and install the [RSA API for Linux](https://www.tek.com/spectrum
 Next, download the most recent [release](https://github.com/NTIA/tekrsa-api-ntia/releases) of this package, and install it using `pip`:
 
 ```
-pip install tekrsa-api-ntia-0.1.0.tar.gz
+pip install tekrsa-api-ntia-0.3.0.tar.gz
 ```
 
 # Usage
