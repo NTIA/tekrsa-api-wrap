@@ -4,7 +4,7 @@ from ctypes import *
 from enum import Enum
 from os.path import abspath, join
 from time import sleep
-from typing import Union, Any
+from typing import Union, Any, Tuple
 
 import numpy as np
 
@@ -1017,7 +1017,7 @@ class RSA:
         """
         self.err_check(self.rsa.DEVICE_Stop())
 
-    def DEVICE_GetEventStatus(self, event_id: str) -> tuple[bool, int]:
+    def DEVICE_GetEventStatus(self, event_id: str) -> Tuple[bool, int]:
         """
         Return global device real-time event status.
 
@@ -1087,7 +1087,7 @@ class RSA:
 
     """ IQ BLOCK METHODS """
 
-    def IQBLK_GetIQAcqInfo(self) -> tuple[int, int, int, int]:
+    def IQBLK_GetIQAcqInfo(self) -> Tuple[int, int, int, int]:
         """
         Return IQ acquisition status info for the most recent IQ block.
 
@@ -1182,7 +1182,7 @@ class RSA:
             self.rsa.IQBLK_GetIQData(byref(iq_data), byref(out_length), c_int(req_length)))
         return np.ctypeslib.as_array(iq_data)
 
-    def IQBLK_GetIQDataDeinterleaved(self, req_length: int) -> tuple[np.ndarray, np.ndarray]:
+    def IQBLK_GetIQDataDeinterleaved(self, req_length: int) -> Tuple[np.ndarray, np.ndarray]:
         """
         Retrieve an IQ block data record in separate I and Q array format.
 
@@ -1397,7 +1397,7 @@ class RSA:
         """
         self.err_check(self.rsa.IQSTREAM_ClearAcqStatus())
 
-    def IQSTREAM_GetAcqParameters(self) -> tuple[float, float]:
+    def IQSTREAM_GetAcqParameters(self) -> Tuple[float, float]:
         """
         Retrieve the processing parameters of IQ streaming output bandwidth
         and sample rate, resulting from the user's requested bandwidth.
@@ -1495,7 +1495,7 @@ class RSA:
         self.err_check(self.rsa.IQSTREAM_GetDiskFileInfo(byref(file_info)))
         return file_info
 
-    def IQSTREAM_GetDiskFileWriteStatus(self) -> tuple[bool, bool]:
+    def IQSTREAM_GetDiskFileWriteStatus(self) -> Tuple[bool, bool]:
         """
         Allow monitoring the progress of file output.
 
@@ -1936,7 +1936,7 @@ class RSA:
                          'actualNumIQSamples': sets.actualNumIQSamples}
         return settings_dict
 
-    def SPECTRUM_GetTrace(self, trace: str, max_trace_points: int) -> tuple[np.ndarray, int]:
+    def SPECTRUM_GetTrace(self, trace: str, max_trace_points: int) -> Tuple[np.ndarray, int]:
         """
         Return the spectrum trace data.
 
@@ -1993,7 +1993,7 @@ class RSA:
                      'acqDataStatus': trace_info.acqDataStatus}
         return info_dict
 
-    def SPECTRUM_GetTraceType(self, trace: str) -> tuple[bool, str]:
+    def SPECTRUM_GetTraceType(self, trace: str) -> Tuple[bool, str]:
         """
         Query the trace settings.
 
@@ -2519,7 +2519,7 @@ class RSA:
                            + 'data loss has occurred.')
 
     def SPECTRUM_Acquire(self, trace: str = 'Trace1', trace_points: int = 801,
-                         timeout_msec: int = 10) -> tuple[np.ndarray, int]:
+                         timeout_msec: int = 10) -> Tuple[np.ndarray, int]:
         """
         Acquire spectrum trace.
 
@@ -2568,7 +2568,7 @@ class RSA:
         self.IQBLK_SetIQBandwidth(iq_bw)
         self.IQBLK_SetIQRecordLength(record_length)
 
-    def IQBLK_Acquire(self, rec_len: int = 1024, timeout_ms: int = 10) -> tuple[np.ndarray, np.ndarray]:
+    def IQBLK_Acquire(self, rec_len: int = 1024, timeout_ms: int = 10) -> Tuple[np.ndarray, np.ndarray]:
         """
         Acquire IQBLK data using IQBLK_GetIQDataDeinterleaved.
 

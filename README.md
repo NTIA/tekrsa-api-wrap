@@ -88,6 +88,17 @@ Replacing `<path-to-shared-objects>` with the path to a directory containing bot
 
 This testing code was been adapted from the [Tektronix Cython RSA API testing code for the 306B](https://github.com/tektronix/RSA_API/blob/master/Python/Cython%20Version/test_rsa306b.py) and [for the 500A/600A series devices](https://github.com/tektronix/RSA_API/blob/master/Python/Cython%20Version/test_rsa500-600.py). In addition to adapting this code to work with this API wrapper, various tests were also added which were not present in the original versions, and the test was made to be universal for all supported RSA devices.
 
+# Development
+
+## Building the Python Package
+
+From the top level directory in this repository, run:
+
+`python3 -m pip install --upgrade build`
+`python3 -m build`
+
+TO 
+
 ## Contact
 
 For technical questions, contact Anthony Romaniello, aromaniello@ntia.gov
