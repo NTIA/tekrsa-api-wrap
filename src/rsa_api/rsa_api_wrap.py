@@ -2488,14 +2488,37 @@ class RSA:
         return iq_data
 
     @staticmethod
-    def IQSTREAM_StatusParser(iq_stream_info: _IQStreamFileInfo) -> None:
+    def IQSTREAM_StatusParser(iq_stream_info: _IQStreamFileInfo, exit: bool=True):
         """
         Parse _IQStreamFileInfo structure.
+
+        Depending on the 'exit' parameter, this method will either raise an
+        error, or return a status code integer. Possible values for the
+        returned status indicator are:
+
+        status | Definition
+        -------------------
+           0   | No error
+           1   | Input overrange.
+           2   | Input buffer > 75% full.
+           3   | Input buffer overflow. IQ Stream processing
+               | too slow. Data loss has occurred.
+           4   | Output buffer > 75% full.
+           5   | Output buffer overflow. File writing
+               | too slow. Data loss has occurred.
 
         Parameters
         ----------
         iq_stream_info : _IQStreamFileInfo
             The IQ streaming status information structure.
+        exit : bool
+            If True, raise an exception for any error status in the IQ stream.
+            If False, return a flag representing the error, without raising an exception.
+
+        Returns
+        -------
+        status: int
+            An integer representing the returned status.
 
         Raises
         ------
@@ -2503,20 +2526,34 @@ class RSA:
             If errors have occurred during IQ streaming.
         """
         status = iq_stream_info.acqStatus
-        if status == 0:
-            pass
-        elif bool(status & 0x10000):  # mask bit 16
-            raise RSAError('Input overrange.')
-        elif bool(status & 0x40000):  # mask bit 18
-            raise RSAError('Input buffer > 75{} full.'.format('%'))
-        elif bool(status & 0x80000):  # mask bit 19
-            raise RSAError('Input buffer overflow. IQStream processing too'
-                           + ' slow, data loss has occurred.')
-        elif bool(status & 0x100000):  # mask bit 20
-            raise RSAError('Output buffer > 75{} full.'.format('%'))
-        elif bool(status & 0x200000):  # mask bit 21
-            raise RSAError('Output buffer overflow. File writing too slow, '
-                           + 'data loss has occurred.')
+        if exit:
+            if status == 0:
+                pass
+            elif bool(status & 0x10000):  # mask bit 16
+                raise RSAError('Input overrange.')
+            elif bool(status & 0x40000):  # mask bit 18
+                raise RSAError('Input buffer > 75{} full.'.format('%'))
+            elif bool(status & 0x80000):  # mask bit 19
+                raise RSAError('Input buffer overflow. IQStream processing too'
+                               + ' slow, data loss has occurred.')
+            elif bool(status & 0x100000):  # mask bit 20
+                raise RSAError('Output buffer > 75{} full.'.format('%'))
+            elif bool(status & 0x200000):  # mask bit 21
+                raise RSAError('Output buffer overflow. File writing too slow, '
+                               + 'data loss has occurred.')
+        else:
+            if status == 0:
+                return 0
+            elif bool(status & 0x10000):  # mask bit 16
+                return 1
+            elif bool(status & 0x40000):  # mask bit 18
+                return 2
+            elif bool(status & 0x80000):  # mask bit 19
+                return 3
+            elif bool(status & 0x100000):  # mask bit 20
+                return 4
+            elif bool(status & 0x200000):  # mask bit 21
+                return 5
 
     def SPECTRUM_Acquire(self, trace: str = 'Trace1', trace_points: int = 801,
                          timeout_msec: int = 10) -> Tuple[np.ndarray, int]:
