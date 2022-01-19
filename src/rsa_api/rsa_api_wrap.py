@@ -2408,7 +2408,8 @@ class RSA:
                 print("Device connected.\n")
 
     def IQSTREAM_Tempfile(self, cf: Union[float, int], ref_level: Union[float, int],
-                          bw: Union[float, int], duration_msec: int) -> np.ndarray:
+                          bw: Union[float, int], duration_msec: int,
+                          return_status: bool=False) -> np.ndarray:
         """
         Retrieve IQ data from device by first writing to a tempfile.
 
@@ -2422,11 +2423,18 @@ class RSA:
             Requested IQ streaming bandwidth in Hz.
         duration_msec : int
             Duration of time to record IQ data, in milliseconds.
+        return_status : bool
+            Whether or not to return the IQ capture status integer.
+            If False, errors will be raised for buffer overflow and
+            input overrange events.
 
         Returns
         -------
-        np.ndarray of np.complex64 values
+        iq_data : np.ndarray of np.complex64 values
             IQ data, with each element in the form (I + j*Q)
+        iq_status : int (optional)
+            The status code for the IQ capture, as defined in
+            the documentation for IQSTREAM_StatusParser().
         """
         # Configuration parameters
         global _IQS_OUT_DEST, _IQS_OUT_DTYPE
@@ -2465,7 +2473,7 @@ class RSA:
 
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
-            self.IQSTREAM_StatusParser(file_info)
+            iq_status = self.IQSTREAM_StatusParser(file_info, not return_status)
 
             self.DEVICE_Stop()
 
@@ -2485,7 +2493,11 @@ class RSA:
         # Re-interleave as numpy complex64)
         iq_data = i + 1j * q
         assert iq_data.dtype == np.complex64
-        return iq_data
+        
+        if return_status:
+            return iq_data, iq_status
+        else:
+            return iq_data
 
     @staticmethod
     def IQSTREAM_StatusParser(iq_stream_info: _IQStreamFileInfo, exit: bool=True):
@@ -2528,7 +2540,7 @@ class RSA:
         status = iq_stream_info.acqStatus
         if exit:
             if status == 0:
-                pass
+                return
             elif bool(status & 0x10000):  # mask bit 16
                 raise RSAError('Input overrange.')
             elif bool(status & 0x40000):  # mask bit 18
