@@ -95,9 +95,9 @@ This testing code was been adapted from the [Tektronix Cython RSA API testing co
 From the top level directory in this repository, run:
 
 `python3 -m pip install --upgrade build`
+
 `python3 -m build`
 
-TO 
 
 ## Contact
 
