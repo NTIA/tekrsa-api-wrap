@@ -60,6 +60,7 @@ A handful of useful functions are included in this wrapper which streamline some
 - `SPECTRUM_Acquire()`
 - `IQSTREAM_StatusParser()`
 - `IQSTREAM_Tempfile()`
+- `IQSTREAM_Tempfile_NoConfig()`
 - `DEVICE_SearchAndConnect()`
 
 To read more about these functions, check their docstrings with `help()`.
