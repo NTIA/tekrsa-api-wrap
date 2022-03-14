@@ -1,4 +1,4 @@
-# Written for Tektronix RSA API for Linux v1.0.0014 and Python 3.9+
+# Written for Tektronix RSA API for Linux v1.0.0014
 import tempfile
 from ctypes import *
 from enum import Enum
@@ -2406,12 +2406,98 @@ class RSA:
             self.DEVICE_Connect()
             if verbose:
                 print("Device connected.\n")
+                
+                
+    def IQSTREAM_Tempfile_NoConfig(self, cf: Union[float, int], ref_level: Union[float, int],
+                          bw: Union[float, int], duration_msec: int,
+                          return_status: bool=False) -> np.ndarray:
+        """
+        Retrieve IQ data from device by first writing to a tempfile.
+        Does not perform any device configuration: only captures data.
+
+        Parameters
+        ----------
+        duration_msec : int
+            Duration of time to record IQ data, in milliseconds.
+        return_status : bool
+            Whether or not to return the IQ capture status integer.
+            If False, errors will be raised for buffer overflow and
+            input overrange events.
+
+        Returns
+        -------
+        iq_data : np.ndarray of np.complex64 values
+            IQ data, with each element in the form (I + j*Q)
+        iq_status : int (optional)
+            The status code for the IQ capture, as defined in
+            the documentation for IQSTREAM_StatusParser().
+        """
+        # Configuration parameters
+        global _IQS_OUT_DEST, _IQS_OUT_DTYPE
+        dest = _IQS_OUT_DEST[3]  # Split SIQ format
+        dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
+        suffix_ctl = -2  # No file suffix
+        filename = 'tempIQ'
+        sleep_time_sec = 0.1  # Loop sleep time checking if acquisition complete
+
+        # Ensure device is stopped before proceeding
+        self.DEVICE_Stop()
+
+        # Create temp directory and configure/collect data
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            filename_base = tmp_dir + '/' + filename
+
+            # Configure device
+            self.IQSTREAM_SetOutputConfiguration(dest, dtype)
+            self.IQSTREAM_SetDiskFilenameBase(filename_base)
+            self.IQSTREAM_SetDiskFilenameSuffix(suffix_ctl)
+            self.IQSTREAM_SetDiskFileLength(duration_msec)
+            self.IQSTREAM_ClearAcqStatus()
+
+            # Collect data
+            complete = False
+
+            self.DEVICE_Run()
+            self.IQSTREAM_Start()
+            while not complete:
+                sleep(sleep_time_sec)
+                complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
+            self.IQSTREAM_Stop()
+
+            # Check acquisition status
+            file_info = self.IQSTREAM_GetDiskFileInfo()
+            iq_status = self.IQSTREAM_StatusParser(file_info, not return_status)
+
+            self.DEVICE_Stop()
+
+            # Read data back in from file
+            with open(filename_base + '.siqd', 'rb') as f:
+                # If SIQ file, skip the header
+                if f.name[-1] == 'q':
+                    # This case currently is never used
+                    # but would be needed if code is later modified
+                    f.seek(1024)
+                # read in data as float32 ("SINGLE" SIQ)
+                d = np.frombuffer(f.read(), dtype=np.float32)
+
+        # Deinterleave I and Q
+        i = d[0:-1:2]
+        q = np.append(d[1:-1:2], d[-1])
+        # Re-interleave as numpy complex64)
+        iq_data = i + 1j * q
+        assert iq_data.dtype == np.complex64
+        
+        if return_status:
+            return iq_data, iq_status
+        else:
+            return iq_data
 
     def IQSTREAM_Tempfile(self, cf: Union[float, int], ref_level: Union[float, int],
                           bw: Union[float, int], duration_msec: int,
                           return_status: bool=False) -> np.ndarray:
         """
         Retrieve IQ data from device by first writing to a tempfile.
+        Performs device configuration before capturing.
 
         Parameters
         ----------
