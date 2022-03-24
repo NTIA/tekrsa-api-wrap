@@ -2408,9 +2408,8 @@ class RSA:
                 print("Device connected.\n")
                 
                 
-    def IQSTREAM_Tempfile_NoConfig(self, cf: Union[float, int], ref_level: Union[float, int],
-                          bw: Union[float, int], duration_msec: int,
-                          return_status: bool=False) -> np.ndarray:
+    def IQSTREAM_Tempfile_NoConfig(self, duration_msec: int,
+                                   return_status: bool=False) -> np.ndarray:
         """
         Retrieve IQ data from device by first writing to a tempfile.
         Does not perform any device configuration: only captures data.
@@ -2438,12 +2437,12 @@ class RSA:
         dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
         suffix_ctl = -2  # No file suffix
         filename = 'tempIQ'
-        sleep_time_sec = 0.1  # Loop sleep time checking if acquisition complete
+        sleep_time_sec = 0.05  # Loop sleep time checking if acquisition complete
 
         # Ensure device is stopped before proceeding
         self.DEVICE_Stop()
 
-        # Create temp directory and configure/collect data
+        # Create temp directory and collect data
         with tempfile.TemporaryDirectory() as tmp_dir:
             filename_base = tmp_dir + '/' + filename
 
@@ -2453,6 +2452,7 @@ class RSA:
             self.IQSTREAM_SetDiskFilenameSuffix(suffix_ctl)
             self.IQSTREAM_SetDiskFileLength(duration_msec)
             self.IQSTREAM_ClearAcqStatus()
+            self.DEVICE_PrepareForRun()
 
             # Collect data
             complete = False
@@ -2472,12 +2472,7 @@ class RSA:
 
             # Read data back in from file
             with open(filename_base + '.siqd', 'rb') as f:
-                # If SIQ file, skip the header
-                if f.name[-1] == 'q':
-                    # This case currently is never used
-                    # but would be needed if code is later modified
-                    f.seek(1024)
-                # read in data as float32 ("SINGLE" SIQ)
+                # As float32 ("SINGLE" SIQ)
                 d = np.frombuffer(f.read(), dtype=np.float32)
 
         # Deinterleave I and Q
@@ -2528,7 +2523,7 @@ class RSA:
         dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
         suffix_ctl = -2  # No file suffix
         filename = 'tempIQ'
-        sleep_time_sec = 0.1  # Loop sleep time checking if acquisition complete
+        sleep_time_sec = 0.05  # Loop sleep time checking if acquisition complete
 
         # Ensure device is stopped before proceeding
         self.DEVICE_Stop()
@@ -2546,6 +2541,7 @@ class RSA:
             self.IQSTREAM_SetDiskFilenameSuffix(suffix_ctl)
             self.IQSTREAM_SetDiskFileLength(duration_msec)
             self.IQSTREAM_ClearAcqStatus()
+            self.DEVICE_PrepareForRun()
 
             # Collect data
             complete = False
@@ -2567,10 +2563,7 @@ class RSA:
             with open(filename_base + '.siqd', 'rb') as f:
                 # If SIQ file, skip the header
                 if f.name[-1] == 'q':
-                    # This case currently is never used
-                    # but would be needed if code is later modified
-                    f.seek(1024)
-                # read in data as float32 ("SINGLE" SIQ)
+                # As float32 ("SINGLE" SIQ)
                 d = np.frombuffer(f.read(), dtype=np.float32)
 
         # Deinterleave I and Q

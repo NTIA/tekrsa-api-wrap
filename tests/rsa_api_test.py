@@ -12,7 +12,7 @@ It requires a compatible RSA device to be connected.
 """
 
 class rsa_api_test(unittest.TestCase):
-    """Test for rsa306b_api.py"""
+    """Test for rsa_api_wrap.py"""
 
     """ALIGN Command Testing"""
 
