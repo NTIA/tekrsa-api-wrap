@@ -2472,7 +2472,6 @@ class RSA:
 
             # Read data back in from file
             with open(filename_base + '.siqd', 'rb') as f:
-                # As float32 ("SINGLE" SIQ)
                 d = np.frombuffer(f.read(), dtype=np.float32)
 
         # Deinterleave I and Q
@@ -2561,9 +2560,6 @@ class RSA:
 
             # Read data back in from file
             with open(filename_base + '.siqd', 'rb') as f:
-                # If SIQ file, skip the header
-                if f.name[-1] == 'q':
-                # As float32 ("SINGLE" SIQ)
                 d = np.frombuffer(f.read(), dtype=np.float32)
 
         # Deinterleave I and Q
