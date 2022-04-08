@@ -14,5 +14,5 @@ The project identified above, which is contained within the repository this docu
 5. [x] Approved disclaimer and licensing language has been included.
 
 In order to complete this approval, please create a new branch, upload and commit your version of this Markdown document to that branch, then create a pull request for that branch. The following must login to GitHub and approve that pull request before the pull request can be merged and this repo made public:
-* Project Lead: Mike Cotton
-* Supervising Division Chief or Release Authority: Mike Cotton, Brian Lain (for Julie Kub), and Lilli Segre
+* Project Lead: Doug Boulware
+* Supervising Division Chief or Release Authority: Mike Cotton and Lilli Segre
