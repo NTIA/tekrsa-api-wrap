@@ -1,4 +1,6 @@
 # Written for Tektronix RSA API for Linux v1.0.0014
+# Refer to the RSA API Programming Reference Manual for details
+# on any functions implemented from this module.
 import tempfile
 from ctypes import *
 from enum import Enum
@@ -324,9 +326,6 @@ class RSA:
         """
         Determine if an alignment is needed or not.
 
-        This is based on the difference between the current temperature
-        and the temperature from the last alignment.
-
         Returns
         -------
         bool
@@ -339,10 +338,6 @@ class RSA:
     def ALIGN_GetWarmupStatus(self) -> bool:
         """
         Report device warm-up status.
-
-        Devices start in the "warm-up" state after initial power up until
-        the internal temperature stabilizes. The warm-up interval is
-        different for different devices.
 
         Returns
         -------
@@ -373,11 +368,6 @@ class RSA:
         """
         Return the state of the external reference.
 
-        This method is less useful than CONFIG_GetFrequencyReferenceSource(),
-        because it only indicates if the external reference is chosen or
-        not. The CONFIG_GetFrequencyReferenceSource() method indicates all
-        available sources, and should often be used in place of this one.
-
         Returns
         -------
         bool
@@ -390,9 +380,6 @@ class RSA:
     def CONFIG_GetExternalRefFrequency(self) -> float:
         """
         Return the frequency, in Hz, of the external reference.
-
-        The external reference input must be enabled for this method to
-        return useful results.
 
         Returns
         -------
@@ -416,9 +403,6 @@ class RSA:
     def CONFIG_GetFrequencyReferenceSource(self) -> str:
         """
         Return a string representing the frequency reference source.
-
-        Note: The RSA306 and RSA306B support only INTERNAL and EXTREF
-        sources.
 
         Returns
         -------
@@ -455,10 +439,6 @@ class RSA:
     def CONFIG_Preset(self) -> None:
         """
         Set the connected device to preset values.
-
-        This method sets the trigger mode to Free Run, the center frequency
-        to 1.5 GHz, the span to 40 MHz, the IQ record length to 1024
-        samples, and the reference level to 0 dBm.
         """
         self.err_check(self.rsa.CONFIG_Preset())
         # For some reason, the record length is not successfully set.
@@ -468,9 +448,6 @@ class RSA:
     def CONFIG_SetCenterFreq(self, cf: Union[float, int]) -> None:
         """
         Set the center frequency value, in Hz.
-
-        When using the tracking generator, be sure to set the tracking
-        generator output level before setting the center frequency.
 
         Parameters
         ----------
@@ -485,14 +462,6 @@ class RSA:
         """
         Enable or disable the external reference.
 
-        When the external reference is enabled, an external reference
-        signal must be connected to the "Ref In" port. The signal must have
-        a frequency of 10 MHz with a +10 dBm maximum amplitude. This signal
-        is used by the local oscillators to mix with the input signal.
-
-        When the external reference is disabled, an internal reference
-        source is used.
-
         Parameters
         ----------
         ext_ref_en : bool
@@ -504,31 +473,6 @@ class RSA:
     def CONFIG_SetFrequencyReferenceSource(self, src: str) -> None:
         """
         Select the device frequency reference source.
-
-        Note: RSA306B and RSA306 support only INTERNAL and EXTREF sources.
-
-        The INTERNAL source is always a valid selection, and is never
-        switched out of automatically.
-
-        The EXTREF source uses the signal input to the Ref In connector as
-        frequency reference for the internal oscillators. If EXTREF is
-        selected without a valid signal connected to Ref In, the source
-        automatically switches to USER if available, or to INTERNAL
-        otherwise. If lock fails, an error status indicating the failure is
-        returned.
-
-        The GNSS source uses the internal GNSS receiver to adjust the
-        internal reference oscillator. If GNSS source is selected, the GNSS
-        receiver must be enabled. If the GNSS receiver is not enabled, the
-        source selection remains GNSS, but no frequency correction is done.
-        GNSS disciplining only occurs when the GNSS receiver has navigation
-        lock. When the receiver is unlocked, the adjustment setting is
-        retained unchanged until receiver lock is achieved or the source is
-        switched to another selection
-
-        If USER source is selected, the previously set USER setting is
-        used. If the USER setting has not been set, the source switches
-        automatically to INTERNAL.
 
         Parameters
         ----------
@@ -559,12 +503,6 @@ class RSA:
         """
         Set the reference level
 
-        The reference level controls the signal path gain and attenuation
-        settings. The value should be set to the maximum expected signal
-        power level in dBm. Setting the value too low may result in over-
-        driving the signal path and ADC, while setting it too high results
-        in excess noise in the signal.
-
         Parameters
         ----------
         ref_level : float or int
@@ -577,13 +515,6 @@ class RSA:
     def CONFIG_GetAutoAttenuationEnable(self) -> bool:
         """
         Return the signal path auto-attenuation enable state.
-
-        Note: This command is for RSA500A Series and RSA600A Series
-        instruments only.
-
-        This method returns the enable state value set by the last
-        call to CONFIG_SetAutoAttenuationEnable(), regardless of
-        whether is has been applied to the hardware yet.
 
         Returns
         -------
@@ -599,13 +530,6 @@ class RSA:
         """
         Set the signal path auto-attenuation enable state.
 
-        Note: This command is for RSA500A Series and RSA600A Series
-        instruments only.
-
-        The device Run state must be re-applied to apply the new
-        state value to the hardware. At device connect time, the
-        auto-attenuation state is initialized to enabled (True).
-
         Parameters
         ----------
         enable : bool
@@ -617,13 +541,6 @@ class RSA:
     def CONFIG_GetRFPreampEnable(self) -> bool:
         """
         Return the state of the RF Preamplifier.
-
-        Note: This command is for RSA500A Series and RSA600A Series
-        instruments only.
-
-        This function returns the RF Preamplifier enable state value
-        set by the last call to CONFIG_SetRFPreampEnable(), regardless
-        of whether it has been applied to the hardware yet.
 
         Returns
         -------
@@ -638,13 +555,7 @@ class RSA:
     def CONFIG_SetRFPreampEnable(self, enable: bool) -> None:
         """
         Set the RF Preamplifier enable state.
-
-        Note: This command is for RSA500A Series and RSA600A Series
-        instruments only.
-
-        The device Run state must be re-applied to cause a new state
-        value to be applied to the hardware.
-
+        
         Parameters
         ----------
         enable : bool
@@ -656,14 +567,6 @@ class RSA:
     def CONFIG_GetRFAttenuator(self) -> float:
         """
         Return the setting of the RF Input Attenuator.
-
-        Note: This command is for RSA500A Series and RSA600A Series
-        instruments only.
-
-        If auto-attenuation is enabled, the returned value is the
-        current RF attenuator hardware configuration. If it is disabled,
-        the returned value is the last value set by CONFIG_SetRFAttenuator(),
-        regardless of whether it has been applied to the hardware.
 
         Returns
         -------
@@ -677,27 +580,6 @@ class RSA:
     def CONFIG_SetRFAttenuator(self, value: Union[float, int]) -> None:
         """
         Set the RF Input Attenuator value manually.
-
-        Note: This command is for RSA500A Series and RSA600A Series
-        instruments only.
-
-        The attenuator can be set in 1 dB steps, over the range -51 dB
-        to 0 dB. Input values outside the range are converted to the
-        closest legal value. Input values with fractional parts are
-        rounded to the nearest integer value, giving 1 dB steps.
-
-        The device auto-attenuation state must be disabled for this
-        control to have effect. Setting the attenuator value with this
-        function does not change the auto-attenuation state.
-
-        The device Run state must be re-applied to cause a new setting
-        value to be applied to the hardware.
-
-        Improper manual attenuator settings may cause signal path
-        saturation. It is recommended to use auto-attenuation mode to
-        set the initial RF Attenuator level when making significant
-        attenuator or preamp setting changes, then query the attenuator
-        settings to determine reasonable values for manual control.
 
         Parameters
         ----------
@@ -714,12 +596,6 @@ class RSA:
     def DEVICE_Connect(self, device_id: int = 0) -> None:
         """
         Connect to a device specified by the device_id parameter.
-
-        If a single device is attached, no parameter needs to be given. If
-        multiple devices are attached, a device ID value must be given to
-        identify which device is the target for connection.
-
-        The device ID value can be found using the search() method.
 
         Parameters
         ----------
@@ -738,9 +614,6 @@ class RSA:
         """
         Query the run state.
 
-        The device only produces data results when in the run state, when
-        signal samples flow from the device to the host API.
-
         Returns
         -------
         bool
@@ -755,14 +628,10 @@ class RSA:
         """
         Retrieve the FPGA version number.
 
-        The FPGA version has the form "Vmajor.minor" - for example, "V3.4"
-        indicates a major version of 3, and a minor version of 4. The
-        maximum total string length supported is 6 characters.
-
         Returns
         -------
         string
-            The FPGA version number, formatted as described above.
+            The FPGA version number.
         """
         global _FPGA_VERSION_STRLEN
         fpga_version = (c_char * _FPGA_VERSION_STRLEN)()
@@ -773,14 +642,10 @@ class RSA:
         """
         Retrieve the firmware version number.
 
-        The firmware version number has the form: "Vmajor.minor". For
-        example: "V3.4", for major version 3, minor version 4. The
-        maximum total string length supported is 6 characters.
-
         Returns
         -------
         string
-            The firmware version number, formatted as described above.
+            The firmware version number.
         """
         global _FW_VERSION_STRLEN
         fw_version = (c_char * _FW_VERSION_STRLEN)()
@@ -791,13 +656,10 @@ class RSA:
         """
         Retrieve the hardware version number.
 
-        The firmware version number has the form: "VversionNumber". For
-        example: "V3". The maximum string length supported is 4 characters.
-
         Returns
         -------
         string
-            The hardware version number, formatted as described above.
+            The hardware version number.
         """
         global _HW_VERSION_STRLEN
         hw_version = (c_char * _HW_VERSION_STRLEN)()
@@ -807,9 +669,6 @@ class RSA:
     def DEVICE_GetNomenclature(self) -> str:
         """
         Retrieve the name of the device.
-
-        The nomenclature has the form "RSA306B", for example. The maximum
-        string length supported is 8 characters.
 
         Returns
         -------
@@ -825,9 +684,6 @@ class RSA:
         """
         Retrieve the serial number of the device.
 
-        The serial number has the form "B012345", for example. The maximum
-        string length supported is 8 characters.
-
         Returns
         -------
         string
@@ -842,14 +698,10 @@ class RSA:
         """
         Retrieve the API version number.
 
-        The API version number has the form: "major.minor.revision", for
-        example: "3.4.0145", for major version 3, minor version 4, and
-        revision 0145. The maximum string length supported is 8 characters.
-
         Returns
         -------
         string
-            The API version number, formatted as described above.
+            The API version number.
         """
         global _API_VERSION_STRLEN
         api_version = (c_char * _API_VERSION_STRLEN)()
@@ -859,22 +711,12 @@ class RSA:
     def DEVICE_PrepareForRun(self) -> None:
         """
         Put the system in a known state, ready to stream data.
-
-        This method does not actually initiate data transfer. During file
-        playback mode, this is useful to allow other parts of your
-        application to prepare to receive data before starting the
-        transfer. See DEVICE_StartFrameTransfer(). This is in comparison to
-        the DEVICE_Run() method, which immediately starts data streaming
-        without waiting for a "go" signal.
         """
         self.err_check(self.rsa.DEVICE_PrepareForRun())
 
     def DEVICE_GetInfo(self) -> dict:
         """
         Retrieve multiple device and information strings.
-
-        Obtained information includes: device nomenclature, serial number,
-        firmware versionn, FPGA version, hardware version, and API version.
 
         Returns
         -------
@@ -903,11 +745,6 @@ class RSA:
         """
         Query device for over-temperature status.
 
-        This method allows clients to monitor the device's internal
-        temperature status when operating in high-temperature environments.
-        If the over-temperature condition is detected, the device should be
-        powered down or moved to a lower temperature area.
-
         Returns
         -------
         bool
@@ -923,10 +760,6 @@ class RSA:
     def DEVICE_Reset(self, device_id: int = -1) -> None:
         """
         Reboot the specified device.
-
-        If a single device is attached, no parameter needs to be given. If
-        multiple devices are attached, a device ID value must be given to
-        identify which device to reboot.
 
         Parameters
         ----------
@@ -955,14 +788,6 @@ class RSA:
     def DEVICE_Search(self) -> dict:
         """
         Search for connectable devices.
-
-        Returns a dict with an entry containing the device ID number,
-        serial number, and device type information for each device found.
-        An example of this would be: {0 : ('B012345', 'RSA306B')}, when a
-        single RSA306B is found, with serial number 'B012345'.
-
-        Valid deviceType strings are "RSA306", "RSA306B", "RSA503A",
-        "RSA507A", "RSA603A", and "RSA607A".
 
         Returns
         -------
@@ -999,56 +824,18 @@ class RSA:
     def DEVICE_StartFrameTransfer(self) -> None:
         """
         Start data transfer.
-
-        This is typically used as the trigger to start data streaming after
-        a call to DEVICE_PrepareForRun(). If the system is in the stopped
-        state, this call places it back into the run state with no changes
-        to any internal data or settings, and data streaming will begin
-        assuming there are no errors.
         """
         self.err_check(self.rsa.DEVICE_StartFrameTransfer())
 
     def DEVICE_Stop(self) -> None:
         """
         Stop data acquisition.
-
-        This method must be called when changes are made to values that
-        affect the signal.
         """
         self.err_check(self.rsa.DEVICE_Stop())
 
     def DEVICE_GetEventStatus(self, event_id: str) -> Tuple[bool, int]:
         """
         Return global device real-time event status.
-
-        The device should be in the Run state when this method is called.
-        Event information is only updated in the Run state, not in the Stop
-        state.
-
-        Overrange event detection requires no additional configuration to
-        activate. The event indicates that the ADC input signal exceeded
-        the allowable range, and signal clipping has likely occurred. The
-        reported timestamp value is the most recent USB transfer frame in
-        which a signal overrange was detected.
-
-        Trigger event detection requires the appropriate HW trigger
-        settings to be configured. These include trigger mode, source,
-        transition, and IF power level (if IF power trigger is selected).
-        The event indicates that the trigger condition has occurred. The
-        reported timestamp value is of the most recent sample instant when
-        a trigger event was detected. The forceTrigger() method can be used
-        to simulate a trigger event.
-
-        1PPS event detection (RSA500AA/600A only) requires the GNSS receiver
-        to be enabled and have navigation lock. The even indicates that the
-        1PPS event has occurred. The reported timestamp value is of the
-        most recent sample instant when the GNSS Rx 1PPS pulse rising edge
-        was detected.
-
-        Querying an event causes the information for that event to be
-        cleared after its state is returned. Subsequent queries will
-        report "no event" until a new one occurs. All events are cleared
-        when the device state transitions from Stop to Run.
 
         Parameters
         ----------
@@ -1091,25 +878,6 @@ class RSA:
         """
         Return IQ acquisition status info for the most recent IQ block.
 
-        IQBLK_GetIQAcqInfo() may be called after an IQ block record is
-        retrieved with IQBLK_GetIQData(), IQBLK_GetIQDataInterleaved(), or
-        IQBLK_GetIQDataComplex(). The returned information applies to the
-        IQ record returned by the "GetData" methods.
-
-        The acquisition status bits returned by this method are:
-            Bit 0 : INPUT_OVERRANGE
-                ADC input overrange during acquisition.
-            Bit 1 : FREQREF_UNLOCKED
-                Frequency reference unlocked during acquisition.
-            Bit 2 : ACQ_SYS_ERROR
-                Internal oscillator unlocked or power failure during
-                acquisition.
-            Bit 3 : DATA_XFER_ERROR
-                USB frame transfer error detected during acquisition.
-
-        A status bit value of 1 indicates that event occurred during the
-        signal acquisition. A value of 0 indicates no occurrence.
-
         Returns
         -------
         sample0Timestamp : int
@@ -1130,15 +898,6 @@ class RSA:
     def IQBLK_AcquireIQData(self) -> None:
         """
         Initiate an IQ block record acquisition.
-
-        Calling this method initiates an IQ block record data acquisition.
-        This method places the device in the Run state if it is not
-        already in that state.
-
-        Before calling this method, all device acquisition parameters must
-        be set to valid states. These include Center Frequency, Reference
-        Level, any desired Trigger conditions, and the IQBLK Bandwidth and
-        Record Length settings.
         """
         self.err_check(self.rsa.IQBLK_AcquireIQData())
 
@@ -1186,14 +945,6 @@ class RSA:
         """
         Retrieve an IQ block data record in separate I and Q array format.
 
-        When complete, the iData array is filled with I-data and the qData
-        array is filled with Q-data. The Q-data is not imaginary.
-
-        For example, with reqLength = N:
-            iData: [I_0, I_1, ..., I_N]
-            qData: [Q_0, Q_1, ..., Q_N]
-            Actual IQ Data: [I_0 + i*Q_0, I_1 + i*Q_1, ..., I_N + i*Q_N]
-
         Parameters
         ----------
         req_length : int
@@ -1222,9 +973,6 @@ class RSA:
         """
         Query the IQ record length.
 
-        The IQ record length is the number of IQ data samples to be
-        generated with each acquisition.
-
         Returns
         -------
         int
@@ -1237,9 +985,6 @@ class RSA:
     def IQBLK_GetIQSampleRate(self) -> float:
         """
         Query the IQ sample rate value.
-
-        The IQ sample rate value depends on the IQ bandwidth value. Set the
-        IQ bandwidth value before querying the sample rate.
 
         Returns
         -------
@@ -1267,15 +1012,6 @@ class RSA:
         """
         Query the maximum IQ record length.
 
-        The maximum IQ record length is the maximum number of samples which
-        can be generated in one IQ block record. The maximum IQ record
-        length varies as a function of the IQ bandwidth - set the bandwidth
-        before querying the maximum record length. You should not request
-        more than the maximum number of IQ samples when setting the record
-        length. The maximum record length is the maximum number of IQ sample
-        pairs that can be generated at the requested IQ bandwidth and
-        corresponding IQ sample rate from 2 seconds of acquired signal data.
-
         Returns
         -------
         int
@@ -1302,10 +1038,6 @@ class RSA:
         """
         Set the IQ bandwidth value.
 
-        The IQ bandwidth must be set before acquiring data. The input value
-        must be within a valid range, and the IQ sample rate is determined
-        by the IQ bandwidth.
-
         Parameters
         ----------
         iq_bandwidth : float or int
@@ -1319,11 +1051,6 @@ class RSA:
     def IQBLK_SetIQRecordLength(self, record_length: int) -> None:
         """
         Set the number of IQ samples generated by each IQ block acquisition.
-
-        A check is performed to ensure that the desired value is within the
-        allowed range. For best results in FFT analysis, choose a multiple
-        of 2. The maximum allowed value is determined by the IQ bandwidth;
-        set that first.
 
         Parameters
         ----------
@@ -1360,9 +1087,6 @@ class RSA:
         """
         Query the maximum IQ bandwidth for IQ streaming.
 
-        The IQ streaming bandwidth should be set to a value no larger than
-        the value returned by this method.
-
         Returns
         -------
         float
@@ -1375,9 +1099,6 @@ class RSA:
     def IQSTREAM_GetMinAcqBandwidth(self) -> float:
         """
         Query the minimum IQ bandwidth for IQ streaming.
-
-        The IQ streaming bandwidth should be set to a value no smaller than
-        the value returned by this method.
 
         Returns
         -------
@@ -1392,8 +1113,6 @@ class RSA:
         """
         Reset the "sticky" status bits of the acqStatus info element during
         an IQ streaming run interval.
-
-        This is effective for both client and file destination runs.
         """
         self.err_check(self.rsa.IQSTREAM_ClearAcqStatus())
 
@@ -1401,11 +1120,6 @@ class RSA:
         """
         Retrieve the processing parameters of IQ streaming output bandwidth
         and sample rate, resulting from the user's requested bandwidth.
-
-        Call this method after calling IQSTREAM_SetAcqBandwidth() to set
-        the requested bandwidth. See IQSTREAM_SetAcqBandwidth() docstring
-        for details of how requested bandwidth is used to select output
-        bandwidth and sample rate settings.
 
         Returns
         -------
@@ -1422,23 +1136,6 @@ class RSA:
     def IQSTREAM_GetDiskFileInfo(self) -> _IQStreamFileInfo:
         """
         Retrieve information about the previous file output operation.
-
-        This information is intended to be queried after the file output
-        operation has completed. It can be queried during file writing as
-        an ongoing status, but some of the results may not be valid at that
-        time.
-
-        Note: This method does not return the filenames parameter as shown
-        in the official API documentation.
-
-        IQSTREAM_ClearAcqStatus() can be called to clear the "sticky" bits
-        during the run if it is desired to reset them.
-
-        Note: If acqStatus indicators show "Output buffer overflow", it is
-        likely that the disk is too slow to keep up with writing the data
-        generated by IQ stream processing. Use a faster disk (SSD is
-        recommended), or a smaller acquisition bandwidth which generates
-        data at a lower rate.
 
         Returns
         -------
@@ -1499,36 +1196,6 @@ class RSA:
         """
         Allow monitoring the progress of file output.
 
-        The returned values indicate when the file output has started and
-        completed. These become valid after IQSTREAM_Start() is called,
-        with any file output destination selected.
-
-        For untriggered configuration, isComplete is all that needs to be
-        monitored. When it switches from false -> true, file output has
-        completed. Note that if "infinite" file length is selected, then
-        isComplete only changes to true when the run is stopped by running
-        IQSTREAM_Stop().
-
-        If triggering is used, isWriting can be used to determine when a
-        trigger has been received. The client application can monitor this
-        value, and if a maximum wait period has elapsed while it is still
-        false, the output operation can be aborted. isWriting behaves the
-        same for both finite and infinite file length settings.
-
-        The [isComplete, isWriting] sequence is as follows (assumes a finite
-        file length setting):
-            Untriggered operation:
-                IQSTREAM_Start()
-                    => File output in progress: [False, True]
-                    => File output complete: [True, True]
-            Triggered operation:
-                IQSTREAM_Start()
-                    => Waiting for trigger, file writing not started:
-                        [False, False]
-                    => Trigger event detected, file writing in progress:
-                        [False, True]
-                    => File output complete: [True, True]
-
         Returns
         -------
         bool: isComplete
@@ -1560,8 +1227,6 @@ class RSA:
         """
         Get the maximum number of IQ sample pairs to be returned by IQSTREAM_GetData().
 
-        Refer to the RSA API Reference Manual for additional details.
-
         Returns
         -------
         int
@@ -1575,33 +1240,6 @@ class RSA:
     def IQSTREAM_SetAcqBandwidth(self, bw_hz_req: Union[float, int]) -> None:
         """
         Request the acquisition bandwidth of the output IQ stream samples.
-
-        The requested bandwidth should only be changed when the instrument
-        is in the global stopped state. The new BW setting does not take
-        effect until the global system state is cycled from stopped to
-        running.
-
-        The range of requested bandwidth values can be queried using
-        IQSTREAM_GetMaxAcqBandwidth() and IQSTREAM_GetMinAcqBandwidth().
-
-        The following table shows the mapping of requested bandwidth to
-        output sample rate for all allowed bandwidth settings.
-
-        Requested BW                      Output Sample Rate
-        ----------------------------------------------------
-        20.0 MHz < BW <= 40.0 MHz         56.000 MSa/s
-        10.0 MHz < BW <= 20.0 MHz         28.000 MSa/s
-        5.0 MHz < BW <= 10.0 MHz          14.000 MSa/s
-        2.50 MHz < BW <= 5.0 MHz          7.000 MSa/s
-        1.25 MHz < BW <= 2.50 MHz         3.500 MSa/s
-        625.0 kHz < BW <= 1.25 MHz        1.750 MSa/s
-        312.50 kHz < BW <= 625.0 kHz      875.000 kSa/s
-        156.250 kHz < BW <= 312.50 kHz    437.500 kSa/s
-        78125.0 Hz < BW <= 156.250 kHz    218.750 kSa/s
-        39062.5 Hz < BW <= 78125.0 Hz     109.375 kSa/s
-        19531.25 Hz < BW <= 39062.5 Hz    54687.5 Sa/s
-        9765.625 Hz < BW <= 19531.25 Hz   24373.75 Sa/s
-        BW <= 9765.625 Hz                 13671.875 Sa/s
 
         Parameters
         ----------
@@ -1617,17 +1255,6 @@ class RSA:
         """
         Set the time length of IQ data written to an output file.
 
-        See IQSTREAM_GetDiskFileWriteStatus to find out how to monitor file
-        output status to determine when it is active and completed.
-
-        Msec Value    File Store Behavior
-        ----------------------------------------------------------------
-        0             No time limit on file output. File storage is
-                      terminated when IQSTREAM_Stop() is called.
-        > 0           File output ends after this number of milliseconds
-                      of samples stored. File storage can be terminated
-                      early by calling IQSTREAM_Stop().
-
         Parameters
         ----------
         msec : int
@@ -1641,18 +1268,6 @@ class RSA:
         """
         Set the base filename for file output.
 
-        Input can include the drive/path, as well as the common base
-        filename portion of the file. It should not include a file
-        extension, as the file writing operation will automatically append
-        the appropriate one for the selected file format.
-
-        The complete output filename has the format:
-        <filenameBase><suffix><.ext>, where <filenameBase is set by this
-        method, <suffix> is set by IQSTREAM_SetDiskFilenameSuffix(), and
-        <.ext> is set by IQSTREAM_SetOutputConfiguration(). If separate data
-        and header files are generated, the same path/filename is used for
-        both, with different extensions to indicate the contents.
-
         Parameters
         ----------
         filename_base : string
@@ -1664,24 +1279,6 @@ class RSA:
     def IQSTREAM_SetDiskFilenameSuffix(self, suffix_ctl: int) -> None:
         """
         Set the control that determines the appended filename suffix.
-
-        suffix_ctl Value    Suffix Generated
-        -------------------------------------------------------------------
-        -2                 None. Base filename is used without suffix. Note
-                           that the output filename will not change automa-
-                           tically from one run to the next, so each output
-                           file will overwrite the previous one unless the
-                           filename is explicitly changed by calling the
-                           Set method again.
-        -1                 String formed from file creation time. Format:
-                           "-YYYY.MM.DD.hh.mm.ss.msec". Note this time is
-                           not directly linked to the data timestamps, so
-                           it should not be used as a high-accuracy time-
-                           stamp of the file data!
-        >= 0               5 digit auto-incrementing index, initial value =
-                           suffixCtl. Format: "-nnnnn". Note index auto-
-                           increments by 1 each time IQSTREAM_Start() is
-                           invoked with file data destination setting.
 
         Parameters
         ----------
@@ -1696,8 +1293,6 @@ class RSA:
         """
         Set the requested size, in sample pairs, of the returned IQ record.
 
-        Refer to the RSA API Reference Manual for additional details.
-
         Parameters
         ----------
         req_size : int
@@ -1710,16 +1305,6 @@ class RSA:
     def IQSTREAM_SetOutputConfiguration(self, dest: str, dtype: str) -> None:
         """
         Set the output data destination and IQ data type.
-
-        The destination can be the client application, or files of different
-        formats. The IQ data type can be chosen independently of the file
-        format. IQ data values are stored in interleaved I/Q/I/Q order
-        regardless of the destination or data type.
-
-        Note: TIQ format files only allow INT32 or INT16 data types.
-
-        Note: Midas 2.0 format files (.cdif, .det extensions) are not
-        implemented.
 
         Parameters
         ----------
@@ -1764,41 +1349,18 @@ class RSA:
     def IQSTREAM_Start(self) -> None:
         """
         Initialize IQ stream processing and initiate data output.
-
-        If the data destination is file, the output file is created, and if
-        triggering is not enabled, data starts to be written to the file
-        immediately. If triggering is enabled, data will not start to be
-        written to the file until a trigger event is detected.
-        TRIG_ForceTrigger() can be used to generate a trigger even if the
-        specified one does not occur.
-
-        If the data destination is the client application, data will become
-        available soon after this method is called. Even if triggering is
-        enabled, the data will begin flowing to the client without need for
-        a trigger event. The client must begin retrieving data as soon
-        after IQSTREAM_Start() as possible.
         """
         self.err_check(self.rsa.IQSTREAM_Start())
 
     def IQSTREAM_Stop(self) -> None:
         """
         Terminate IQ stream processing and disable data output.
-
-        If the data destination is file, file writing is stopped and the
-        output file is closed.
         """
         self.err_check(self.rsa.IQSTREAM_Stop())
 
     def IQSTREAM_WaitForIQDataReady(self, timeout_msec: int) -> bool:
         """
         Block while waiting for IQ Stream data output.
-
-        This method blocks while waiting for the IQ Streaming processing to
-        produce the next block of IQ data. If data becomes available during
-        the timeout interval, the method returns True immediately. If the
-        timeout interval expires without data being ready, the method
-        returns False. A timeoutMsec value of 0 checks for data ready, and
-        returns immediately without waiting.
 
         Parameters
         ----------
@@ -1826,11 +1388,6 @@ class RSA:
     def SPECTRUM_AcquireTrace(self) -> None:
         """
         Initiate a spectrum trace acquisition.
-
-        Before calling this method, all acquisition parameters must be set
-        to valid states. These include center frequency, reference level,
-        any desired trigger conditions, and the spectrum configuration
-        settings.
         """
         self.err_check(self.rsa.SPECTRUM_AcquireTrace())
 
@@ -1884,9 +1441,6 @@ class RSA:
     def SPECTRUM_GetSettings(self) -> dict:
         """
         Return the spectrum settings.
-
-        In addition to user settings, this method also returns some
-        internal setting values.
 
         Returns
         -------
@@ -2029,28 +1583,12 @@ class RSA:
     def SPECTRUM_SetDefault(self) -> None:
         """
         Set the spectrum settings to their default values.
-
-        This does not change the spectrum enable status. The following are
-        the default settings:
-            Span : 40 MHz
-            RBW : 300 kHz
-            Enable VBW : False
-            VBW : 300 kHz
-            Trace Length : 801
-            Window : Kaiser
-            Vertical Unit : dBm
-            Trace 0 : Enable, +Peak
-            Trace 1 : Disable, -Peak
-            Trace 2 : Disable, Average
         """
         self.err_check(self.rsa.SPECTRUM_SetDefault())
 
     def SPECTRUM_SetEnable(self, enable: bool) -> None:
         """
         Set the spectrum enable status.
-
-        When the spectrum measurement is enabled, the IQ acquisition is
-        disabled.
 
         Parameters
         ----------
@@ -2180,10 +1718,6 @@ class RSA:
         """
         Return the trigger mode (either freeRun or triggered).
 
-        When the mode is set to freeRun, the signal is continually updated.
-
-        When the mode is set to Triggered, the data is only updated when a trigger occurs.
-
         Returns
         -------
         string
@@ -2198,9 +1732,6 @@ class RSA:
         """
         Return the trigger position percent.
 
-        Note: The trigger position setting only affects IQ Block and
-        Spectrum acquisitions.
-
         Returns
         -------
         float
@@ -2213,10 +1744,6 @@ class RSA:
     def TRIG_GetTriggerSource(self) -> str:
         """
         Return the trigger source.
-
-        When set to external, acquisition triggering looks at the external
-        trigger input for a trigger signal. When set to IF power level, the
-        power of the signal itself causes a trigger to occur.
 
         Returns
         -------
@@ -2250,9 +1777,6 @@ class RSA:
     def TRIG_SetIFPowerTriggerLevel(self, level: Union[float, int]) -> None:
         """
         Set the IF power detection level.
-
-        When set to the IF power level trigger source, a trigger occurs
-        when the signal power level crosses this detection level.
 
         Parameters
          ----------
@@ -2291,13 +1815,6 @@ class RSA:
     def TRIG_SetTriggerPositionPercent(self, trig_pos_percent: Union[float, int] = 50) -> None:
         """
         Set the trigger position percentage.
-
-        This value determines how much data to store before and after a
-        trigger event. The stored data is used to update the signal's image
-        when a trigger occurs. The trigger position setting only affects IQ
-        Block and Spectrum acquisitions.
-
-        Default setting is 50%.
 
         Parameters
         ----------
