@@ -934,7 +934,7 @@ class RSA:
             and Q-data is stored at the odd indexes.
         """
         req_length = RSA.check_int(req_length)
-        req_length = RSA.check_range(req_length, 2, self.IQBLK_GetMaxIQRecordLength())
+        req_length = RSA.check_range(req_length, 2, self.IQBLK_GetIQRecordLength())
         out_length = c_int()
         iq_data = (c_float * (req_length * 2))()
         self.err_check(
@@ -961,7 +961,7 @@ class RSA:
             Array of Q-data.
         """
         req_length = RSA.check_int(req_length)
-        req_length = RSA.check_range(req_length, 2, self.IQBLK_GetMaxIQRecordLength())
+        req_length = RSA.check_range(req_length, 2, self.IQBLK_GetIQRecordLength())
         i_data = (c_float * req_length)()
         q_data = (c_float * req_length)()
         out_length = c_int()
