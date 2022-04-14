@@ -69,7 +69,7 @@ To read more about these functions, check their docstrings with `help()`.
 
 ## Known Issues
 
-Known issues exist in the underlying Tektronix RSA API for Linux. This wrapper is limited by these known issues in certain ways. The list of issues is reproduced from the Tektronix RSA API for Linux release notes, and are up-to-date as of version 1.0.0014:
+Known issues exist in the underlying Tektronix RSA API for Linux. This wrapper is limited by these known issues in certain ways. The list of issues is reproduced from the [Tektronix RSA API for Linux release notes](https://download.tek.com/software/supporting_files/ReleaseNotes_1_0_0014_64bit_066207701.txt), and is up-to-date as of version 1.0.0014:
 
 - No support for API functions related to GNSS, Audio, Power, Ref Time.
 - Using RSA607A, Output Level for Tracking Generator cannot be set.
