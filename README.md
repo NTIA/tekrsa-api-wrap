@@ -101,6 +101,11 @@ From the top level directory in this repository, run:
 
 `python3 -m build`
 
+## License
+
+See [LICENSE](LICENSE.md)
+
+TEKTRONIX and TEK are registered trademarks of Tektronix, Inc.
 
 ## Contact
 
