@@ -105,9 +105,13 @@ From the top level directory in this repository, run:
 
 See [LICENSE](LICENSE.md)
 
+## Disclaimers
+
 TEKTRONIX and TEK are registered trademarks of Tektronix, Inc.
 
-Microsoft, Windows are trademarks of the Microsoft group of companies.
+Microsoft and Windows are trademarks of the Microsoft group of companies.
+
+Certain commercial equipment, instruments, or materials are identified in this project were used for the convenience of the developers. In no case does such identification imply recommendation or endorsement by the National Telecommunications and Information Administration, nor does it imply that the material or equipment identified is necessarily the best available for the purpose.
 
 ## Contact
 
