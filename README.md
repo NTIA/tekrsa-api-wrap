@@ -1,4 +1,4 @@
-# NTIA/ITS Tektronix® RSA API for Linux Python Wrapper
+# NTIA/ITS Tektronix® RSA API for Linux Python Wrapper[^disclaimer]
 
 This Python package provides a module which wraps the [Tektronix Python/Ctypes RSA API](https://github.com/tektronix/RSA_API/tree/master/Python), with the goal of masking the Ctypes dependency and streamlining use of the API in a Python development environment. It implements most available RSA API functionality (see below for more information). Very basic function documentation is included in docstrings for quick reference during development, but this is not meant as a substitute for the much more comprehensive [RSA API Programming Reference manual](https://www.tek.com/spectrum-analyzer/rsa306-manual/rsa306-rsa306b-and-rsa500a-600a-0) offered by Tektronix. The manual details many peculiarities in API or device behavior which are not immediately obvious, and yet are extremely important for developing software to control an RSA device. This wrapper was primarily developed for use within the [`scos-tekrsa`](https://github.com/ntia/scos-tekrsa) plugin for NTIA/ITS's [`scos-sensor`](https://github.com/ntia/scos-sensor) platform for networked sensor operation, but has proven useful for other applications involving programmatic control of Tektronix RSA devices. Depending on your use case, and especially if you plan to run your program from Microsoft Windows®, it may be worth looking into the [Tektronix Python/Cython RSA API](https://github.com/tektronix/RSA_API/tree/master/Python/Cython%20Version) instead of using this wrapper.
 
@@ -12,7 +12,6 @@ The `rsa_api` module requires the `libRSA_API.so` and `libcyusb_shared.so` share
 - [Usage](#usage)
 - [Development](#development)
 - [License](#license)
-- [Disclaimers](#disclaimers)
 - [Contact](#contact)
 
 
@@ -115,14 +114,14 @@ From the top level directory in this repository, run:
 
 See [LICENSE](LICENSE.md)
 
-## Disclaimers
-
 TEKTRONIX and TEK are registered trademarks of Tektronix, Inc.
 
 Microsoft and Windows are trademarks of the Microsoft group of companies.
 
-Certain commercial equipment, instruments, or materials are identified in this project were used for the convenience of the developers. In no case does such identification imply recommendation or endorsement by the National Telecommunications and Information Administration, nor does it imply that the material or equipment identified is necessarily the best available for the purpose.
-
 ## Contact
 
 For technical questions, contact Anthony Romaniello, aromaniello@ntia.gov
+
+### Disclaimer
+
+[^disclaimer]: Certain commercial equipment, instruments, or materials are identified in this project were used for the convenience of the developers. In no case does such identification imply recommendation or endorsement by the National Telecommunications and Information Administration, nor does it imply that the material or equipment identified is necessarily the best available for the purpose.
