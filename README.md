@@ -6,7 +6,17 @@ Requires python>=3.7, numpy>=1.21, and the Tektronix RSA API for Linux.
 
 The `rsa_api` module requires the `libRSA_API.so` and `libcyusb_shared.so` shared objects from the Tektronix RSA API for Linux, and by default expects to find them in the scos-sensor drivers directory (`/drivers/`). If you are running without scos-sensor, you will need to specify your drivers directory when instantiating the API wrapper. See the Usage section below for an example of how to do this.
 
-# Installation
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Development](#development)
+- [License](#license)
+- [Disclaimers](#disclaimers)
+- [Contact](#contact)
+
+
+## Installation
 
 First, download and install the [RSA API for Linux](https://www.tek.com/spectrum-analyzer/rsa306-software/rsa-application-programming-interface--api-for-64bit-linux--v100014) from Tektronix. Follow the included installation instructions, then copy the `libRSA_API.so` and `libcyusb_shared.so` files into your project.
 
@@ -16,7 +26,7 @@ Next, download the most recent [release](https://github.com/NTIA/tekrsa-api-ntia
 pip install tekrsa-api-ntia-0.7.1.tar.gz
 ```
 
-# Usage
+## Usage
 
 Once you've followed the installation instructions above, you can interface with a supported Tektronix RSA device from Python as follows:
 
@@ -41,7 +51,7 @@ help(rsa_api.RSA.IQSTREAM_Tempfile)  # Does not require initalized RSA device
 
 Ensure that you consult the [RSA API Programming Reference manual](https://www.tek.com/spectrum-analyzer/rsa306-manual/rsa306-rsa306b-and-rsa500a-600a-0) to fully understand the behavior of API functions.
 
-## List of API functions NOT implemented
+### List of API functions NOT implemented
 
 - All functions not supported by the RSA API for Linux (see "Known Issues" below)
 - All `DPX`, `PLAYBACK`, `IFSTREAM` and `TRKGEN` functions
@@ -54,7 +64,7 @@ Ensure that you consult the [RSA API Programming Reference manual](https://www.t
 - `IQSTREAM_GetIQData()`
     - `IQSTREAM_Tempfile()` is used instead.
 
-## List of API "Helper" functions
+### List of API "Helper" functions
 A handful of useful functions are included in this wrapper which streamline some common tasks. These "helper functions" include:
 
 - `IQBLK_Acquire()`
@@ -67,7 +77,7 @@ A handful of useful functions are included in this wrapper which streamline some
 
 To read more about these functions, check their docstrings with `help()`.
 
-## Known Issues
+### Known Issues
 
 Known issues exist in the underlying Tektronix RSA API for Linux. This wrapper is limited by these known issues in certain ways. The list of issues is reproduced from the [Tektronix RSA API for Linux release notes](https://download.tek.com/software/supporting_files/ReleaseNotes_1_0_0014_64bit_066207701.txt), and is up-to-date as of version 1.0.0014:
 
@@ -79,7 +89,7 @@ Known issues exist in the underlying Tektronix RSA API for Linux. This wrapper i
 - Spectrum Sweep speed is slow (less than 1GHz/s) for span more than 3GHz.
 	- Workaround: None.
 
-## Running Tests
+### Running Tests
 
 A testing file is included in the `tests` directory of this repository. The test uses `unittest` to test supported API functions. Running a test requires an RSA device to be connected. The same test is used for any supported RSA device, with some tests being enabled, disabled, or modified as needed depending on the device's specific supported API functions. For example, tests of the preamp configuration are not run when testing with an RSA which does not have a preamp.
 
@@ -91,9 +101,9 @@ Replacing `<path-to-shared-objects>` with the path to a directory containing bot
 
 This testing code was been adapted from the [Tektronix Cython RSA API testing code for the 306B](https://github.com/tektronix/RSA_API/blob/master/Python/Cython%20Version/test_rsa306b.py) and [for the 500A/600A series devices](https://github.com/tektronix/RSA_API/blob/master/Python/Cython%20Version/test_rsa500-600.py). In addition to adapting this code to work with this API wrapper, various tests were also added which were not present in the original versions, and the test was made to be universal for all supported RSA devices.
 
-# Development
+## Development
 
-## Building the Python Package
+### Building the Python Package
 
 From the top level directory in this repository, run:
 
