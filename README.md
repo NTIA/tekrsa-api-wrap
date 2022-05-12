@@ -14,15 +14,14 @@ The `rsa_api` module requires the `libRSA_API.so` and `libcyusb_shared.so` share
 - [License](#license)
 - [Contact](#contact)
 
-
 ## Installation
 
 First, download and install the [RSA API for Linux](https://www.tek.com/spectrum-analyzer/rsa306-software/rsa-application-programming-interface--api-for-64bit-linux--v100014) from Tektronix. Follow the included installation instructions, then copy the `libRSA_API.so` and `libcyusb_shared.so` files into your project.
 
 Next, download the most recent [release](https://github.com/NTIA/tekrsa-api-ntia/releases) of this package, and install it using `pip`:
 
-```
-pip install tekrsa-api-ntia-0.7.1.tar.gz
+```bash
+pip install tekrsa-api-ntia-0..1.tar.gz
 ```
 
 ## Usage
@@ -55,15 +54,16 @@ Ensure that you consult the [RSA API Programming Reference manual](https://www.t
 - All functions not supported by the RSA API for Linux (see "Known Issues" below)
 - All `DPX`, `PLAYBACK`, `IFSTREAM` and `TRKGEN` functions
 - `DEVICE_GetErrorString()`
-    - Alternate error handling is implemented.
+  - Alternate error handling is implemented.
 - `DEVICE_GetNomenclatureW()` and `IQSTREAM_SetDiskFilenameBaseW()`
-    - `DEVICE_GetNomenclature()` and `IQSTREAM_SetDiskFilenameBase()` are used instead.
+  - `DEVICE_GetNomenclature()` and `IQSTREAM_SetDiskFilenameBase()` are used instead.
 - `IQBLK_GetIQDataCplx()`
-    - `IQBLK_GetIQData()` and `IQBLK_GetIQDataDeinterleaved()` are used instead.
+  - `IQBLK_GetIQData()` and `IQBLK_GetIQDataDeinterleaved()` are used instead.
 - `IQSTREAM_GetIQData()`
-    - `IQSTREAM_Tempfile()` is used instead.
+  - `IQSTREAM_Tempfile()` is used instead.
 
 ### List of API "Helper" functions
+
 A handful of useful functions are included in this wrapper which streamline some common tasks. These "helper functions" include:
 
 - `IQBLK_Acquire()`
@@ -82,11 +82,11 @@ Known issues exist in the underlying Tektronix RSA API for Linux. This wrapper i
 
 - No support for API functions related to GNSS, Audio, Power, Ref Time.
 - Using RSA607A, Output Level for Tracking Generator cannot be set.
-	- Workaround: None.
+  - Workaround: None.
 - When Connect and Disconnect procedure is repeatedly run for extended time duration (> 2 hours), segmentation fault is observed.
-	- Workaround: Disconnect the USB RF Instrument by removing from USB 3.0 port and connect again.
+  - Workaround: Disconnect the USB RF Instrument by removing from USB 3.0 port and connect again.
 - Spectrum Sweep speed is slow (less than 1GHz/s) for span more than 3GHz.
-	- Workaround: None.
+  - Workaround: None.
 
 ### Running Tests
 
