@@ -530,13 +530,17 @@ class RSA:
         """
         Set the signal path auto-attenuation enable state.
 
+        The device Run state is cycled in order to apply the setting.
+
         Parameters
         ----------
         enable : bool
             True enables auto-attenuation operation. False disables it.
         """
         enable = RSA.check_bool(enable)
+        self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.CONFIG_SetAutoAttenuationEnable(c_bool(enable)))
+        self.rsa.DEVICE_Run()
 
     def CONFIG_GetRFPreampEnable(self) -> bool:
         """
@@ -556,13 +560,17 @@ class RSA:
         """
         Set the RF Preamplifier enable state.
         
+        The device Run state is cycled in order to apply the setting.
+        
         Parameters
         ----------
         enable : bool
             True enables the RF Preamplifier. False disables it.
         """
         enable = RSA.check_bool(enable)
+        self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.CONFIG_SetRFPreampEnable(c_bool(enable)))
+        self.rsa.DEVICE_Run()
 
     def CONFIG_GetRFAttenuator(self) -> float:
         """
@@ -581,6 +589,8 @@ class RSA:
         """
         Set the RF Input Attenuator value manually.
 
+        The device Run state is cycled in order to apply the setting.
+
         Parameters
         ----------
         value : float
@@ -589,7 +599,9 @@ class RSA:
         """
         value = RSA.check_num(value)
         value = RSA.check_range(value, -51, 0)
+        self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.CONFIG_SetRFAttenuator(c_double(value)))
+        self.rsa.DEVICE_Run()
 
     """ DEVICE METHODS """
 
@@ -1241,6 +1253,8 @@ class RSA:
         """
         Request the acquisition bandwidth of the output IQ stream samples.
 
+        The device Run state is cycled in order to apply the setting.
+
         Parameters
         ----------
         bw_hz_req : float or int
@@ -1249,7 +1263,9 @@ class RSA:
         bw_hz_req = RSA.check_num(bw_hz_req)
         bw_hz_req = RSA.check_range(bw_hz_req, self.IQSTREAM_GetMinAcqBandwidth(),
                                     self.IQSTREAM_GetMaxAcqBandwidth())
+        self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.IQSTREAM_SetAcqBandwidth(c_double(bw_hz_req)))
+        self.rsa.DEVICE_Run()
 
     def IQSTREAM_SetDiskFileLength(self, msec: int) -> None:
         """
