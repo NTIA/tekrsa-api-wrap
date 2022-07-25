@@ -1,6 +1,6 @@
 # NTIA/ITS Python Wrapper for Tektronix® RSA API for Linux
 
-This Python package provides a module which wraps the [Tektronix Python/Ctypes RSA API](https://github.com/tektronix/RSA_API/tree/master/Python), with the goal of masking the Ctypes dependency and streamlining use of the API in a Python development environment. It implements most of the available RSA API functionality (see below for more information). Basic documentation is included in docstrings for quick reference during development, but this is not meant as a substitute for the comprehensive [RSA API Programming Reference manual](https://www.tek.com/spectrum-analyzer/rsa306-manual/rsa306-rsa306b-and-rsa500a-600a-0) offered by Tektronix. The manual details many peculiarities in API or device behavior which are not immediately obvious, and yet are extremely important for developing software to control an RSA device.
+This Python package provides a module which wraps the [Tektronix Python/Ctypes RSA API](https://github.com/tektronix/RSA_API/tree/master/Python), with the goal of masking the Ctypes dependency and streamlining use of the API in a Python development environment. It implements most of the available RSA API functionality (see below for more information). Basic documentation is included in docstrings for quick reference during development, but this is not meant as a substitute for the comprehensive [RSA API Programming Reference manual](https://www.tek.com/spectrum-analyzer/rsa306-manual/rsa306-rsa306b-and-rsa500a-600a-0) offered by Tektronix. The manual details many peculiarities in API or device behavior which are not immediately obvious, and yet are important for developing software to control an RSA device.
 
 This wrapper was developed for applications involving programmatic control of Tektronix RSA devices from Linux. Depending on your use case, and especially if you plan to run your program from Microsoft Windows®, it may be worth looking into the [Tektronix Python/Cython RSA API](https://github.com/tektronix/RSA_API/tree/master/Python/Cython%20Version) instead of using this wrapper.
 
@@ -29,7 +29,7 @@ pip install tekrsa-api-wrap-1.1.0.tar.gz
 
 ## Usage
 
-Once you've followed the installation instructions above, connect to and control a supported Tektronix RSA device using Python as follows:
+Interface with a supported Tektronix RSA device using Python as follows:
 
 ```python
 import rsa_api
