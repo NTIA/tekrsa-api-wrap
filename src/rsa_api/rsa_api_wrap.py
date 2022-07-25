@@ -491,8 +491,8 @@ class RSA:
         global _FREQ_REF_SOURCE
         src = RSA.check_string(src)
         if src in _FREQ_REF_SOURCE:
-            if src == 'GNSS':
-                raise RSAError("RSA 306B does not support GNSS reference.")
+            if src == 'GNSS' and self.DEVICE_GetNomenclature() in ['RSA306', 'RSA306B']:
+                raise RSAError("RSA 300 series device does not support GNSS reference.")
             else:
                 value = c_int(_FREQ_REF_SOURCE.index(src))
                 self.err_check(self.rsa.CONFIG_SetFrequencyReferenceSource(value))
@@ -530,13 +530,17 @@ class RSA:
         """
         Set the signal path auto-attenuation enable state.
 
+        The device Run state is cycled in order to apply the setting.
+
         Parameters
         ----------
         enable : bool
             True enables auto-attenuation operation. False disables it.
         """
         enable = RSA.check_bool(enable)
+        self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.CONFIG_SetAutoAttenuationEnable(c_bool(enable)))
+        self.rsa.DEVICE_Run()
 
     def CONFIG_GetRFPreampEnable(self) -> bool:
         """
@@ -556,13 +560,17 @@ class RSA:
         """
         Set the RF Preamplifier enable state.
         
+        The device Run state is cycled in order to apply the setting.
+        
         Parameters
         ----------
         enable : bool
             True enables the RF Preamplifier. False disables it.
         """
         enable = RSA.check_bool(enable)
+        self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.CONFIG_SetRFPreampEnable(c_bool(enable)))
+        self.rsa.DEVICE_Run()
 
     def CONFIG_GetRFAttenuator(self) -> float:
         """
@@ -581,6 +589,8 @@ class RSA:
         """
         Set the RF Input Attenuator value manually.
 
+        The device Run state is cycled in order to apply the setting.
+
         Parameters
         ----------
         value : float
@@ -589,7 +599,9 @@ class RSA:
         """
         value = RSA.check_num(value)
         value = RSA.check_range(value, -51, 0)
+        self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.CONFIG_SetRFAttenuator(c_double(value)))
+        self.rsa.DEVICE_Run()
 
     """ DEVICE METHODS """
 
@@ -934,7 +946,7 @@ class RSA:
             and Q-data is stored at the odd indexes.
         """
         req_length = RSA.check_int(req_length)
-        req_length = RSA.check_range(req_length, 2, self.IQBLK_GetMaxIQRecordLength())
+        req_length = RSA.check_range(req_length, 2, self.IQBLK_GetIQRecordLength())
         out_length = c_int()
         iq_data = (c_float * (req_length * 2))()
         self.err_check(
@@ -961,7 +973,7 @@ class RSA:
             Array of Q-data.
         """
         req_length = RSA.check_int(req_length)
-        req_length = RSA.check_range(req_length, 2, self.IQBLK_GetMaxIQRecordLength())
+        req_length = RSA.check_range(req_length, 2, self.IQBLK_GetIQRecordLength())
         i_data = (c_float * req_length)()
         q_data = (c_float * req_length)()
         out_length = c_int()
@@ -1241,6 +1253,8 @@ class RSA:
         """
         Request the acquisition bandwidth of the output IQ stream samples.
 
+        The device Run state is cycled in order to apply the setting.
+
         Parameters
         ----------
         bw_hz_req : float or int
@@ -1249,7 +1263,9 @@ class RSA:
         bw_hz_req = RSA.check_num(bw_hz_req)
         bw_hz_req = RSA.check_range(bw_hz_req, self.IQSTREAM_GetMinAcqBandwidth(),
                                     self.IQSTREAM_GetMaxAcqBandwidth())
+        self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.IQSTREAM_SetAcqBandwidth(c_double(bw_hz_req)))
+        self.rsa.DEVICE_Run()
 
     def IQSTREAM_SetDiskFileLength(self, msec: int) -> None:
         """
@@ -1944,8 +1960,8 @@ class RSA:
         -------
         iq_data : np.ndarray of np.complex64 values
             IQ data, with each element in the form (I + j*Q)
-        iq_status : int (optional)
-            The status code for the IQ capture, as defined in
+        iq_status : str (optional)
+            The status string for the IQ capture, as defined in
             the documentation for IQSTREAM_StatusParser().
         """
         # Configuration parameters
@@ -2029,7 +2045,7 @@ class RSA:
         -------
         iq_data : np.ndarray of np.complex64 values
             IQ data, with each element in the form (I + j*Q)
-        iq_status : int (optional)
+        iq_status : str (optional)
             The status code for the IQ capture, as defined in
             the documentation for IQSTREAM_StatusParser().
         """
@@ -2097,19 +2113,24 @@ class RSA:
         Parse _IQStreamFileInfo structure.
 
         Depending on the 'exit' parameter, this method will either raise an
-        error, or return a status code integer. Possible values for the
+        error, or return a status string. Possible values for the
         returned status indicator are:
 
         status | Definition
         -------------------
            0   | No error
            1   | Input overrange.
-           2   | Input buffer > 75% full.
-           3   | Input buffer overflow. IQ Stream processing
+           2   | USB data stream discontinuity.
+           3   | Input buffer > 75% full.
+           4   | Input buffer overflow. IQ Stream processing
                | too slow. Data loss has occurred.
-           4   | Output buffer > 75% full.
-           5   | Output buffer overflow. File writing
+           5   | Output buffer > 75% full.
+           6   | Output buffer overflow. File writing
                | too slow. Data loss has occurred.
+
+        In the case of multiple status codes being returned, the status
+        string will contain all returned status strings, separated by line
+        breaks.
 
         Parameters
         ----------
@@ -2121,43 +2142,45 @@ class RSA:
 
         Returns
         -------
-        status: int
-            An integer representing the returned status.
+        status: str
+            A string containing all returned status messages.
 
         Raises
         ------
         RSAError
-            If errors have occurred during IQ streaming.
+            If errors have occurred during IQ streaming, and exit is True.
         """
         status = iq_stream_info.acqStatus
-        if exit:
-            if status == 0:
+
+        # Handle no error case
+        if status == 0:
+            if exit:
                 return
-            elif bool(status & 0x10000):  # mask bit 16
-                raise RSAError('Input overrange.')
-            elif bool(status & 0x40000):  # mask bit 18
-                raise RSAError('Input buffer > 75{} full.'.format('%'))
-            elif bool(status & 0x80000):  # mask bit 19
-                raise RSAError('Input buffer overflow. IQStream processing too'
-                               + ' slow, data loss has occurred.')
-            elif bool(status & 0x100000):  # mask bit 20
-                raise RSAError('Output buffer > 75{} full.'.format('%'))
-            elif bool(status & 0x200000):  # mask bit 21
-                raise RSAError('Output buffer overflow. File writing too slow, '
-                               + 'data loss has occurred.')
+            else:
+                return 'No error.'
         else:
-            if status == 0:
-                return 0
-            elif bool(status & 0x10000):  # mask bit 16
-                return 1
-            elif bool(status & 0x40000):  # mask bit 18
-                return 2
-            elif bool(status & 0x80000):  # mask bit 19
-                return 3
-            elif bool(status & 0x100000):  # mask bit 20
-                return 4
-            elif bool(status & 0x200000):  # mask bit 21
-                return 5
+            # Construct status string if status != 0
+            status_str = ''
+            if bool(status & 0x10000):  # mask bit 16
+                status_str += 'Input overrange\n.'
+            if bool(status & 0x20000): # mask bit 17
+                status_str += 'USB data stream discontinuity.\n'
+            if bool(status & 0x40000):  # mask bit 18
+                status_str += 'Input buffer > 75{} full.\n'.format('%')
+            if bool(status & 0x80000):  # mask bit 19
+                status_str += 'Input buffer overflow. IQStream processing too'
+                status_str += ' slow, data loss has occurred.\n'
+            if bool(status & 0x100000):  # mask bit 20
+                status_str += 'Output buffer > 75{} full.\n'.format('%')
+            if bool(status & 0x200000):  # mask bit 21
+                status_str += 'Output buffer overflow. File writing too slow, '
+                status_str += 'data loss has occurred.\n'
+            if exit:
+                # Raise error with full string if configured
+                raise RSAError(status_str)
+            else:
+                # Or just return the status string
+                return status_str
 
     def SPECTRUM_Acquire(self, trace: str = 'Trace1', trace_points: int = 801,
                          timeout_msec: int = 10) -> Tuple[np.ndarray, int]:
