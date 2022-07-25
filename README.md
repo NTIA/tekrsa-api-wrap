@@ -1,10 +1,8 @@
-# NTIA/ITS Tektronix® RSA API for Linux Python Wrapper[^disclaimer]
+# NTIA/ITS Python Wrapper for Tektronix® RSA API for Linux
 
-This Python package provides a module which wraps the [Tektronix Python/Ctypes RSA API](https://github.com/tektronix/RSA_API/tree/master/Python), with the goal of masking the Ctypes dependency and streamlining use of the API in a Python development environment. It implements most available RSA API functionality (see below for more information). Very basic function documentation is included in docstrings for quick reference during development, but this is not meant as a substitute for the much more comprehensive [RSA API Programming Reference manual](https://www.tek.com/spectrum-analyzer/rsa306-manual/rsa306-rsa306b-and-rsa500a-600a-0) offered by Tektronix. The manual details many peculiarities in API or device behavior which are not immediately obvious, and yet are extremely important for developing software to control an RSA device. This wrapper was primarily developed for use within the [`scos-tekrsa`](https://github.com/ntia/scos-tekrsa) plugin for NTIA/ITS's [`scos-sensor`](https://github.com/ntia/scos-sensor) platform for networked sensor operation, but has proven useful for other applications involving programmatic control of Tektronix RSA devices. Depending on your use case, and especially if you plan to run your program from Microsoft Windows®, it may be worth looking into the [Tektronix Python/Cython RSA API](https://github.com/tektronix/RSA_API/tree/master/Python/Cython%20Version) instead of using this wrapper.
+This Python package provides a module which wraps the [Tektronix Python/Ctypes RSA API](https://github.com/tektronix/RSA_API/tree/master/Python), with the goal of masking the Ctypes dependency and streamlining use of the API in a Python development environment. It implements most of the available RSA API functionality (see below for more information). Basic documentation is included in docstrings for quick reference during development, but this is not meant as a substitute for the comprehensive [RSA API Programming Reference manual](https://www.tek.com/spectrum-analyzer/rsa306-manual/rsa306-rsa306b-and-rsa500a-600a-0) offered by Tektronix. The manual details many peculiarities in API or device behavior which are not immediately obvious, and yet are extremely important for developing software to control an RSA device.
 
-Requires python>=3.7, numpy>=1.21, and the Tektronix RSA API for Linux.
-
-The `rsa_api` module requires the `libRSA_API.so` and `libcyusb_shared.so` shared objects from the Tektronix RSA API for Linux, and by default expects to find them in the scos-sensor drivers directory (`/drivers/`). If you are running without scos-sensor, you will need to specify your drivers directory when instantiating the API wrapper. See the Usage section below for an example of how to do this.
+This wrapper was developed for applications involving programmatic control of Tektronix RSA devices from Linux. Depending on your use case, and especially if you plan to run your program from Microsoft Windows®, it may be worth looking into the [Tektronix Python/Cython RSA API](https://github.com/tektronix/RSA_API/tree/master/Python/Cython%20Version) instead of using this wrapper.
 
 ## Table of Contents
 
@@ -13,20 +11,25 @@ The `rsa_api` module requires the `libRSA_API.so` and `libcyusb_shared.so` share
 - [Development](#development)
 - [License](#license)
 - [Contact](#contact)
+- [Disclaimer](#disclaimer)
 
 ## Installation
 
+Requires python>=3.7, numpy>=1.21, and the Tektronix RSA API for Linux.
+
 First, download and install the [RSA API for Linux](https://www.tek.com/spectrum-analyzer/rsa306-software/rsa-application-programming-interface--api-for-64bit-linux--v100014) from Tektronix. Follow the included installation instructions, then copy the `libRSA_API.so` and `libcyusb_shared.so` files into your project.
+
+These shared object files are required, and this API wrapper by default expects to find them in the [`scos-sensor`](https://github.com/NTIA/scos-sensor/) drivers directory (`/drivers/`). If you are running without `scos-sensor`, you will need to specify your drivers directory when instantiating the API wrapper. See the [Usage section](#usage) below for an example of how to do this.
 
 Next, download the most recent [release](https://github.com/NTIA/tekrsa-api-ntia/releases) of this package, and install it using `pip`:
 
 ```bash
-pip install tekrsa-api-ntia-0..1.tar.gz
+pip install tekrsa-api-wrap-1.1.0.tar.gz
 ```
 
 ## Usage
 
-Once you've followed the installation instructions above, you can interface with a supported Tektronix RSA device from Python as follows:
+Once you've followed the installation instructions above, connect to and control a supported Tektronix RSA device using Python as follows:
 
 ```python
 import rsa_api
@@ -46,8 +49,6 @@ rsa.DEVICE_Disconnect()
 help(rsa.IQSTREAM_Tempfile) # Requires initialized RSA device
 help(rsa_api.RSA.IQSTREAM_Tempfile)  # Does not require initalized RSA device
 ```
-
-Ensure that you consult the [RSA API Programming Reference manual](https://www.tek.com/spectrum-analyzer/rsa306-manual/rsa306-rsa306b-and-rsa500a-600a-0) to fully understand the behavior of API functions.
 
 ### List of API functions NOT implemented
 
@@ -78,21 +79,13 @@ To read more about these functions, check their docstrings with `help()`.
 
 ### Known Issues
 
-Known issues exist in the underlying Tektronix RSA API for Linux. This wrapper is limited by these known issues in certain ways. The list of issues is reproduced from the [Tektronix RSA API for Linux release notes](https://download.tek.com/software/supporting_files/ReleaseNotes_1_0_0014_64bit_066207701.txt), and is up-to-date as of version 1.0.0014:
-
-- No support for API functions related to GNSS, Audio, Power, Ref Time.
-- Using RSA607A, Output Level for Tracking Generator cannot be set.
-  - Workaround: None.
-- When Connect and Disconnect procedure is repeatedly run for extended time duration (> 2 hours), segmentation fault is observed.
-  - Workaround: Disconnect the USB RF Instrument by removing from USB 3.0 port and connect again.
-- Spectrum Sweep speed is slow (less than 1GHz/s) for span more than 3GHz.
-  - Workaround: None.
+Known issues exist in the underlying Tektronix RSA API for Linux, and therefore this wrapper is limited in certain ways. The list of known issues is provided by Tektronix in the [Tektronix RSA API for Linux release notes](https://download.tek.com/software/supporting_files/ReleaseNotes_1_0_0014_64bit_066207701.txt) (up-to-date as of version 1.0.0014):
 
 ### Running Tests
 
 A testing file is included in the `tests` directory of this repository. The test uses `unittest` to test supported API functions. Running a test requires an RSA device to be connected. The same test is used for any supported RSA device, with some tests being enabled, disabled, or modified as needed depending on the device's specific supported API functions. For example, tests of the preamp configuration are not run when testing with an RSA which does not have a preamp.
 
-From the top level directory of this repository, run the test, with segmentation fault handling, by running:
+From the top-level directory of this repository, run the test, with segmentation fault handling, by running:
 
 `python3 -q -X faulthandler tests/rsa_api_test.py <path-to-shared-objects>`
 
@@ -102,9 +95,7 @@ This testing code was been adapted from the [Tektronix Cython RSA API testing co
 
 ## Development
 
-### Building the Python Package
-
-From the top level directory in this repository, run:
+Build the Python package from the top level directory in this repository by running:
 
 `python3 -m pip install --upgrade build`
 
@@ -124,4 +115,4 @@ For technical questions, contact Anthony Romaniello, aromaniello@ntia.gov
 
 ### Disclaimer
 
-[^disclaimer]: Certain commercial equipment, instruments, or materials are identified in this project were used for the convenience of the developers. In no case does such identification imply recommendation or endorsement by the National Telecommunications and Information Administration, nor does it imply that the material or equipment identified is necessarily the best available for the purpose.
+Certain commercial equipment, instruments, or materials are identified in this project were used for the convenience of the developers. In no case does such identification imply recommendation or endorsement by the National Telecommunications and Information Administration, nor does it imply that the material or equipment identified is necessarily the best available for the purpose.
