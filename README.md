@@ -113,6 +113,6 @@ Microsoft and Windows are trademarks of the Microsoft group of companies.
 
 For technical questions, contact Anthony Romaniello, aromaniello@ntia.gov
 
-### Disclaimer
+## Disclaimer
 
 Certain commercial equipment, instruments, or materials are identified in this project were used for the convenience of the developers. In no case does such identification imply recommendation or endorsement by the National Telecommunications and Information Administration, nor does it imply that the material or equipment identified is necessarily the best available for the purpose.
