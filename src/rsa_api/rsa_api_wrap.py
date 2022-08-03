@@ -6,7 +6,7 @@ from ctypes import *
 from enum import Enum
 from os.path import abspath, join
 from time import sleep
-from typing import Union, Any, Tuple
+from typing import Union, Any, Tuple, Dict
 
 import numpy as np
 
@@ -20,6 +20,8 @@ _FW_VERSION_STRLEN = 6  # Bytes allocated for FW version number string
 _HW_VERSION_STRLEN = 4  # Bytes allocated for HW version number string
 _NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
 _API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
+_FREQ_REF_USER_SETTING_STRLEN = 54  # Characters in frequency reference user setting string
+_DEVINFO_MAX_STRLEN = 19 # Datetime substring length in user setting string
 
 """ ENUMERATION TUPLES """
 
@@ -36,6 +38,12 @@ _TRIGGER_SOURCE = ('External', 'IFPowerLevel')
 _TRIGGER_TRANSITION = ('LH', 'HL', 'Either')
 
 """ CUSTOM DATA STRUCTURES """
+
+class _FreqRefUserInfo(Structure):
+    _fields_ = [('isvalid', c_bool),
+                ('dacValue', c_uint32),
+                ('datetime', c_char * _DEVINFO_MAX_STRLEN),
+                ('temperature', c_double)]
 
 
 class _SpectrumLimits(Structure):
@@ -458,6 +466,35 @@ class RSA:
         cf = RSA.check_range(cf, self.CONFIG_GetMinCenterFreq(), self.CONFIG_GetMaxCenterFreq())
         self.err_check(self.rsa.CONFIG_SetCenterFreq(c_double(cf)))
 
+    def CONFIG_DecodeFreqRefUserSettingString(self, i_usstr: str) -> dict:
+        """
+        Decode a formatted User setting string into component elements.
+
+        Parameters
+        ----------
+        i_usstr: A formatted User setting string.
+
+        Returns
+        -------
+        A dict with keys:
+            'isvalid' (bool) : True if the dict contains valid data.
+            'dacValue' (int) : Control DAC value
+            'datetime' (str) : Datetime string, formatted "YYYY-MM-DDThh:mm:ss"
+            'temperature' (float) : Device temperature when user setting data
+                was created.
+        """
+        i_usstr = c_char_p(i_usstr.encode('utf-8'))
+        o_fui = _FreqRefUserInfo()
+        self.err_check(self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui)))
+        # Temperature result is always 0, so manually parse the input string
+        temperature = float(i_usstr.value.decode('utf-8')[-8:-3])
+        fui = {'isvalid': o_fui.isvalid,
+               'dacValue': o_fui.dacValue,
+               'datetime': o_fui.datetime.decode('utf-8'),
+               'temperature': temperature
+        }
+        return fui
+
     def CONFIG_SetExternalRefEnable(self, ext_ref_en: bool) -> None:
         """
         Enable or disable the external reference.
@@ -498,6 +535,40 @@ class RSA:
                 self.err_check(self.rsa.CONFIG_SetFrequencyReferenceSource(value))
         else:
             raise RSAError("Input does not match a valid setting.")
+
+    def CONFIG_GetFreqRefUserSetting(self) -> str:
+        """
+        Get the Frequency Reference User-source setting value.
+
+        Returns
+        --------
+        A formatted user setting string containing:
+        "$FRU,<devType>,<devSN>,<dacVal>,<dateTime>,<devTemp>*<CS>"
+        Where:
+            <devType> : device type
+            <devSN> : device serial number
+            <dacVal> : integer DAC value
+            <dateTime> : date and time of creation, format:
+                "YYY-MM-DDThh:mm:ss"
+            <devTemp> : device temperature (degC) at creation
+            <CS> : integer checksum of characters before '*'
+        
+        If the User setting is not valid, then the user string result
+        returns the string "Invalid User Setting"
+        """
+        o_usstr = (c_char * _FREQ_REF_USER_SETTING_STRLEN)()
+        self.err_check(self.rsa.CONFIG_GetFreqRefUserSetting(byref(o_usstr)))
+        return o_usstr.value.decode('utf-8')
+
+    def CONFIG_SetFreqRefUserSetting(self, i_usstr: Union[str, None] = None):
+        if i_usstr is None:
+            self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(None))
+        else:
+            RSA.check_string(i_usstr)
+            if i_usstr == 'Invalid User Setting' or len(i_usstr) != _FREQ_REF_USER_SETTING_STRLEN:
+                raise RSAError("User setting is invalid.")
+            i_usstr = c_char_p(i_usstr.encode('utf-8'))
+            self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(i_usstr))
 
     def CONFIG_SetReferenceLevel(self, ref_level: Union[float, int]) -> None:
         """
@@ -733,7 +804,6 @@ class RSA:
         Returns
         -------
         dict
-            All of the above listed information as strings.
             Keys: nomenclature, serialNum, fwVersion, fpgaVersion,
                   hwVersion, apiVersion
         """
@@ -2255,3 +2325,48 @@ class RSA:
         while not self.IQBLK_WaitForIQDataReady(timeout_ms):
             pass
         return self.IQBLK_GetIQDataDeinterleaved(req_length=rec_len)
+
+
+    def DEVICE_GetTemperature(self, unit: str = 'celsius') -> float:
+        """
+        Get the device temperature.
+
+        Parameters
+        ----------
+        unit: The unit for the returned temperature value. May
+            be any of 'celsius', 'fahrehnheit', 'kelvin', 'kelvins',
+            'c', 'f', or 'k' (case-insensitive). Defaults to 'celsius'.
+
+        Returns
+        -------
+        The device temperature in the specified units.
+        """
+        # Store previous frequency reference setting
+        old_fru = (c_char * _FREQ_REF_USER_SETTING_STRLEN)()
+        self.err_check(self.rsa.CONFIG_GetFreqRefUserSetting(byref(old_fru)))
+        old_fru = old_fru.value.decode('utf-8')
+
+        # Update frequency reference setting to update temperature value
+        self.CONFIG_SetFreqRefUserSetting(None)
+
+        # Retrieve new frequency reference setting
+        fru = self.CONFIG_GetFreqRefUserSetting()
+
+        # Restore previous frequency reference setting
+        if old_fru != 'Invalid User Setting':
+            self.CONFIG_SetFreqRefUserSetting(old_fru)
+
+        # Read back in value
+        temp_c = self.CONFIG_DecodeFreqRefUserSettingString(fru)['temperature']
+
+        # Handle unit conversion if needed
+        if unit.lower() in ['c', 'celsius']:
+            temp = temp_c
+        elif unit.lower() in ['f', 'fahrenheit']:
+            temp = (temp_c * 9. / 5.) + 32
+        elif unit.lower() in ['k', 'kelvin', 'kelvins']:
+            temp = temp_c + 273.15
+        else:
+            raise RSAError("Invalid temperature unit selection.")
+
+        return temp
