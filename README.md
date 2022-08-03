@@ -15,16 +15,16 @@ This wrapper was developed for applications involving programmatic control of Te
 
 ## Installation
 
-Requires python>=3.7, numpy>=1.21, and the Tektronix RSA API for Linux.
+Requires `python>=3.7`, `numpy>=1.21`, and the Tektronix RSA API for Linux.
 
 First, download and install the [RSA API for Linux](https://www.tek.com/spectrum-analyzer/rsa306-software/rsa-application-programming-interface--api-for-64bit-linux--v100014) from Tektronix. Follow the included installation instructions, then copy the `libRSA_API.so` and `libcyusb_shared.so` files into your project.
 
-These shared object files are required, and this API wrapper by default expects to find them in the [`scos-sensor`](https://github.com/NTIA/scos-sensor/) drivers directory (`/drivers/`). If you are running without `scos-sensor`, you will need to specify your drivers directory when instantiating the API wrapper. See the [Usage section](#usage) below for an example of how to do this.
+These shared object files are required, and this API wrapper by default expects to find them in the [SCOS Sensor](https://github.com/NTIA/scos-sensor/) drivers directory (`/drivers/`). If you are running without SCOS Sensor, you will need to specify your drivers directory when instantiating the API wrapper. See the [Usage section](#usage) below for an example of how to do this.
 
 Next, download the most recent [release](https://github.com/NTIA/tekrsa-api-ntia/releases) of this package, and install it using `pip`:
 
 ```bash
-pip install tekrsa-api-wrap-1.1.0.tar.gz
+pip install tekrsa-api-wrap-1.2.0.tar.gz
 ```
 
 ## Usage
@@ -74,6 +74,7 @@ A handful of useful functions are included in this wrapper which streamline some
 - `IQSTREAM_Tempfile()`
 - `IQSTREAM_Tempfile_NoConfig()`
 - `DEVICE_SearchAndConnect()`
+- `DEVICE_GetTemperature()`
 
 To read more about these functions, check their docstrings with `help()`.
 
