@@ -6,7 +6,7 @@ from ctypes import *
 from enum import Enum
 from os.path import abspath, join
 from time import sleep
-from typing import Union, Any, Tuple, Dict
+from typing import Union, Any, Tuple
 
 import numpy as np
 
@@ -33,7 +33,7 @@ _SPECTRUM_DETECTORS = ('PosPeak', 'NegPeak', 'AverageVRMS', 'Sample')
 _SPECTRUM_TRACES = ('Trace1', 'Trace2', 'Trace3')
 _SPECTRUM_VERTICAL_UNITS = ('dBm', 'Watt', 'Volt', 'Amp', 'dBmV')
 _SPECTRUM_WINDOWS = ('Kaiser', 'Mil6dB', 'BlackmanHarris', 'Rectangular', 'FlatTop', 'Hann')
-_TRIGGER_MODE = ('freeRun', 'triggered')
+_TRIGGER_MODE = ('freerun', 'triggered')
 _TRIGGER_SOURCE = ('External', 'IFPowerLevel')
 _TRIGGER_TRANSITION = ('LH', 'HL', 'Either')
 
@@ -1817,7 +1817,7 @@ class RSA:
         Returns
         -------
         string
-            Either "freeRun" or "Triggered".
+            Either "freeRun" or "triggered".
         """
         global _TRIGGER_MODE
         mode = c_int()
@@ -1859,11 +1859,10 @@ class RSA:
 
         Returns
         -------
-        string
-            Name of the trigger transition mode. Valid results:
-                LH : Trigger on low-to-high input level change.
-                HL : Trigger on high-to-low input level change.
-                Either : Trigger on either LH or HL transitions.
+        Name of the trigger transition mode. Valid results:
+            LH : Trigger on low-to-high input level change.
+            HL : Trigger on high-to-low input level change.
+            Either : Trigger on either LH or HL transitions.
         """
         global _TRIGGER_TRANSITION
         transition = c_int()
@@ -1875,7 +1874,7 @@ class RSA:
         Set the IF power detection level.
 
         Parameters
-         ----------
+        ----------
         level : float or int
             The detection power level setting for the IF power trigger
             source.
@@ -1890,10 +1889,9 @@ class RSA:
 
         Parameters
         ----------
-        mode : string
-            The trigger mode. Valid settings:
-                freeRun : to continually gather data
-                Triggered : do not acquire new data unless triggered
+        mode : The trigger mode, case insensitive. Valid settings:
+            freeRun : to continually gather data
+            Triggered : do not acquire new data unless triggered
 
         Raises
         ------
@@ -1902,8 +1900,8 @@ class RSA:
         """
         global _TRIGGER_MODE
         mode = RSA.check_string(mode)
-        if mode in _TRIGGER_MODE:
-            mode_value = _TRIGGER_MODE.index(mode)
+        if mode.lower() in _TRIGGER_MODE:
+            mode_value = _TRIGGER_MODE.index(mode.lower())
             self.err_check(self.rsa.TRIG_SetTriggerMode(c_int(mode_value)))
         else:
             raise RSAError("Invalid trigger mode input string.")
@@ -2263,7 +2261,7 @@ class RSA:
                 return status_str
 
     def SPECTRUM_Acquire(self, trace: str = 'Trace1', trace_points: int = 801,
-                         timeout_msec: int = 10) -> Tuple[np.ndarray, int]:
+                         timeout_msec: int = 50) -> Tuple[np.ndarray, int]:
         """
         Acquire spectrum trace.
 
@@ -2287,8 +2285,10 @@ class RSA:
         """
         self.DEVICE_Run()
         self.SPECTRUM_AcquireTrace()
-        while not self.SPECTRUM_WaitForTraceReady(timeout_msec):
-            pass
+        ready = False
+        while not ready:
+            ready = self.SPECTRUM_WaitForTraceReady(timeout_msec)
+            sleep(int(timeout_msec * 1e-3))
         return self.SPECTRUM_GetTrace(trace, trace_points)
 
     def IQBLK_Configure(self, cf: Union[float, int] = 1e9, ref_level: Union[float, int] = 0,
@@ -2312,7 +2312,7 @@ class RSA:
         self.IQBLK_SetIQBandwidth(iq_bw)
         self.IQBLK_SetIQRecordLength(record_length)
 
-    def IQBLK_Acquire(self, rec_len: int = 1024, timeout_ms: int = 10) -> Tuple[np.ndarray, np.ndarray]:
+    def IQBLK_Acquire(self, rec_len: int = 1024, timeout_ms: int = 50) -> Tuple[np.ndarray, np.ndarray]:
         """
         Acquire IQBLK data using IQBLK_GetIQDataDeinterleaved.
 
@@ -2332,8 +2332,10 @@ class RSA:
         """
         self.DEVICE_Run()
         self.IQBLK_AcquireIQData()
-        while not self.IQBLK_WaitForIQDataReady(timeout_ms):
-            pass
+        ready = False
+        while not ready:
+            ready = self.IQBLK_WaitForIQDataReady(timeout_ms)
+            sleep(int(timeout_ms * 1e-3))
         return self.IQBLK_GetIQDataDeinterleaved(req_length=rec_len)
 
 

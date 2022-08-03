@@ -1,8 +1,10 @@
 import unittest
+import numpy as np
 from os.path import isdir
 from os import mkdir, environ
+from time import sleep
+
 import rsa_api
-import numpy as np
 
 """
 This is a test for the entire API Wrapper.
@@ -163,9 +165,15 @@ class rsa_api_test(unittest.TestCase):
         self.assertRaises(rsa_api.RSAError, self.rsa.DEVICE_GetEventStatus, 'abc')
 
     def test_DEVICE_GetEventStatus_trig_event(self):
+        self.rsa.DEVICE_Stop()
+        # Setup trigger mode
+        self.rsa.TRIG_SetTriggerMode('triggered')
+        self.rsa.TRIG_SetTriggerSource('IFPowerLevel')
+        self.rsa.TRIG_SetTriggerTransition('Either')
+        self.rsa.TRIG_SetIFPowerTriggerLevel(0)
         self.rsa.DEVICE_Run()
         self.rsa.TRIG_ForceTrigger()
-        # sleep(0.05)
+        sleep(0.5)
         trig, trigTs = self.rsa.DEVICE_GetEventStatus('TRIGGER')
         self.assertTrue(trig)
         self.assertGreater(trigTs, 0)
@@ -242,11 +250,10 @@ class rsa_api_test(unittest.TestCase):
         self.assertIsInstance(self.rsa.IQBLK_GetIQSampleRate(), float)
 
     def test_IQBLK_GetIQData(self):
-        rl = 1000
         self.rsa.IQBLK_Configure()  # Configure to defaults
-        i, q = self.rsa.IQBLK_Acquire(rl, 10)
-        self.assertEqual(len(i), rl)
-        self.assertEqual(len(q), rl)
+        i, q = self.rsa.IQBLK_Acquire()
+        self.assertEqual(len(i), 1024)
+        self.assertEqual(len(q), 1024)
 
         self.assertRaises(ValueError, self.rsa.IQBLK_Acquire, rec_len=self.neg)
         self.assertRaises(ValueError, self.rsa.IQBLK_Acquire, rec_len=200000000)
@@ -345,7 +352,7 @@ class rsa_api_test(unittest.TestCase):
     """TRIG Command Testing"""
 
     def test_TRIG_TriggerMode(self):
-        mode = ["freeRun", "triggered"]
+        mode = ["freerun", "triggered"]
         for m in mode:
             self.assertIsNone(self.rsa.TRIG_SetTriggerMode(m))
             self.assertEqual(self.rsa.TRIG_GetTriggerMode(), m)

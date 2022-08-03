@@ -94,7 +94,7 @@ From the top-level directory of this repository, run the test by running:
 
   ```bash
   export SO_DIR=/path/to/drivers
-  python -m unittest
+  python -X faulthandler -m unittest
   ```
 
 Replacing `<path-to-shared-objects>` with the path to a directory containing both `libRSA_API.so` and `libcyusb_shared.so`.
