@@ -28,7 +28,7 @@ These shared object files are required, and this API wrapper by default expects 
 Next, download the most recent [release](https://github.com/NTIA/tekrsa-api-ntia/releases) of this package, and install it using `pip`:
 
 ```bash
-pip install tekrsa-api-wrap-1.2.0.tar.gz
+pip install tekrsa_api_wrap-1.2.0.tar.gz
 ```
 
 ## Usage
@@ -90,9 +90,12 @@ Known issues exist in the underlying Tektronix RSA API for Linux, and therefore 
 
 A testing file is included in the `tests` directory of this repository. The test uses `unittest` to test supported API functions. Running a test requires an RSA device to be connected. The same test is used for any supported RSA device, with some tests being enabled, disabled, or modified as needed depending on the device's specific supported API functions. For example, tests of the preamp configuration are not run when testing with an RSA which does not have a preamp.
 
-From the top-level directory of this repository, run the test, with segmentation fault handling, by running:
+From the top-level directory of this repository, run the test by running:
 
-`python3 -q -X faulthandler tests/rsa_api_test.py <path-to-shared-objects>`
+  ```bash
+  export SO_DIR=/path/to/drivers
+  python -X faulthandler -m unittest
+  ```
 
 Replacing `<path-to-shared-objects>` with the path to a directory containing both `libRSA_API.so` and `libcyusb_shared.so`.
 
