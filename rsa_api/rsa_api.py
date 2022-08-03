@@ -20,6 +20,8 @@ _FW_VERSION_STRLEN = 6  # Bytes allocated for FW version number string
 _HW_VERSION_STRLEN = 4  # Bytes allocated for HW version number string
 _NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
 _API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
+_FREQ_REF_USER_SETTING_STRLEN = 54  # Characters in frequency reference user setting string
+_DEVINFO_MAX_STRLEN = 19 # Datetime substring length in user setting string
 
 """ ENUMERATION TUPLES """
 
@@ -31,11 +33,17 @@ _SPECTRUM_DETECTORS = ('PosPeak', 'NegPeak', 'AverageVRMS', 'Sample')
 _SPECTRUM_TRACES = ('Trace1', 'Trace2', 'Trace3')
 _SPECTRUM_VERTICAL_UNITS = ('dBm', 'Watt', 'Volt', 'Amp', 'dBmV')
 _SPECTRUM_WINDOWS = ('Kaiser', 'Mil6dB', 'BlackmanHarris', 'Rectangular', 'FlatTop', 'Hann')
-_TRIGGER_MODE = ('freeRun', 'triggered')
+_TRIGGER_MODE = ('freerun', 'triggered')
 _TRIGGER_SOURCE = ('External', 'IFPowerLevel')
 _TRIGGER_TRANSITION = ('LH', 'HL', 'Either')
 
 """ CUSTOM DATA STRUCTURES """
+
+class _FreqRefUserInfo(Structure):
+    _fields_ = [('isvalid', c_bool),
+                ('dacValue', c_uint32),
+                ('datetime', c_char * _DEVINFO_MAX_STRLEN),
+                ('temperature', c_double)]
 
 
 class _SpectrumLimits(Structure):
@@ -458,6 +466,35 @@ class RSA:
         cf = RSA.check_range(cf, self.CONFIG_GetMinCenterFreq(), self.CONFIG_GetMaxCenterFreq())
         self.err_check(self.rsa.CONFIG_SetCenterFreq(c_double(cf)))
 
+    def CONFIG_DecodeFreqRefUserSettingString(self, i_usstr: str) -> dict:
+        """
+        Decode a formatted User setting string into component elements.
+
+        Parameters
+        ----------
+        i_usstr: A formatted User setting string.
+
+        Returns
+        -------
+        A dict with keys:
+            'isvalid' (bool) : True if the dict contains valid data.
+            'dacValue' (int) : Control DAC value
+            'datetime' (str) : Datetime string, formatted "YYYY-MM-DDThh:mm:ss"
+            'temperature' (float) : Device temperature when user setting data
+                was created.
+        """
+        i_usstr = c_char_p(i_usstr.encode('utf-8'))
+        o_fui = _FreqRefUserInfo()
+        self.err_check(self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui)))
+        # Temperature result is always 0, so manually parse the input string
+        temperature = float(i_usstr.value.decode('utf-8')[-8:-3])
+        fui = {'isvalid': o_fui.isvalid,
+               'dacValue': o_fui.dacValue,
+               'datetime': o_fui.datetime.decode('utf-8'),
+               'temperature': temperature
+        }
+        return fui
+
     def CONFIG_SetExternalRefEnable(self, ext_ref_en: bool) -> None:
         """
         Enable or disable the external reference.
@@ -498,6 +535,50 @@ class RSA:
                 self.err_check(self.rsa.CONFIG_SetFrequencyReferenceSource(value))
         else:
             raise RSAError("Input does not match a valid setting.")
+
+    def CONFIG_GetFreqRefUserSetting(self) -> str:
+        """
+        Get the Frequency Reference User-source setting value.
+
+        Returns
+        --------
+        A formatted user setting string containing:
+        "$FRU,<devType>,<devSN>,<dacVal>,<dateTime>,<devTemp>*<CS>"
+        Where:
+            <devType> : device type
+            <devSN> : device serial number
+            <dacVal> : integer DAC value
+            <dateTime> : date and time of creation, format:
+                "YYY-MM-DDThh:mm:ss"
+            <devTemp> : device temperature (degC) at creation
+            <CS> : integer checksum of characters before '*'
+        
+        If the User setting is not valid, then the user string result
+        returns the string "Invalid User Setting"
+        """
+        o_usstr = (c_char * _FREQ_REF_USER_SETTING_STRLEN)()
+        self.err_check(self.rsa.CONFIG_GetFreqRefUserSetting(byref(o_usstr)))
+        return o_usstr.value.decode('utf-8')
+
+    def CONFIG_SetFreqRefUserSetting(self, i_usstr: Union[str, None] = None) -> None:
+        """
+        Set the Frequency Reference User-source setting value.
+
+        Parameters
+        ----------
+        i_usstr: The user setting string, which must be formatted as
+            by CONFIG_GetFreqRefUserSetting(). If this parameter is 
+            None (the default behavior), the current frequency reference
+            setting is copied to the User setting memory.
+        """
+        if i_usstr is None:
+            self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(None))
+        else:
+            RSA.check_string(i_usstr)
+            if i_usstr == 'Invalid User Setting' or len(i_usstr) != _FREQ_REF_USER_SETTING_STRLEN:
+                raise RSAError("User setting is invalid.")
+            i_usstr = c_char_p(i_usstr.encode('utf-8'))
+            self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(i_usstr))
 
     def CONFIG_SetReferenceLevel(self, ref_level: Union[float, int]) -> None:
         """
@@ -733,7 +814,6 @@ class RSA:
         Returns
         -------
         dict
-            All of the above listed information as strings.
             Keys: nomenclature, serialNum, fwVersion, fpgaVersion,
                   hwVersion, apiVersion
         """
@@ -1737,7 +1817,7 @@ class RSA:
         Returns
         -------
         string
-            Either "freeRun" or "Triggered".
+            Either "freeRun" or "triggered".
         """
         global _TRIGGER_MODE
         mode = c_int()
@@ -1779,11 +1859,10 @@ class RSA:
 
         Returns
         -------
-        string
-            Name of the trigger transition mode. Valid results:
-                LH : Trigger on low-to-high input level change.
-                HL : Trigger on high-to-low input level change.
-                Either : Trigger on either LH or HL transitions.
+        Name of the trigger transition mode. Valid results:
+            LH : Trigger on low-to-high input level change.
+            HL : Trigger on high-to-low input level change.
+            Either : Trigger on either LH or HL transitions.
         """
         global _TRIGGER_TRANSITION
         transition = c_int()
@@ -1795,7 +1874,7 @@ class RSA:
         Set the IF power detection level.
 
         Parameters
-         ----------
+        ----------
         level : float or int
             The detection power level setting for the IF power trigger
             source.
@@ -1810,10 +1889,9 @@ class RSA:
 
         Parameters
         ----------
-        mode : string
-            The trigger mode. Valid settings:
-                freeRun : to continually gather data
-                Triggered : do not acquire new data unless triggered
+        mode : The trigger mode, case insensitive. Valid settings:
+            freeRun : to continually gather data
+            Triggered : do not acquire new data unless triggered
 
         Raises
         ------
@@ -1822,8 +1900,8 @@ class RSA:
         """
         global _TRIGGER_MODE
         mode = RSA.check_string(mode)
-        if mode in _TRIGGER_MODE:
-            mode_value = _TRIGGER_MODE.index(mode)
+        if mode.lower() in _TRIGGER_MODE:
+            mode_value = _TRIGGER_MODE.index(mode.lower())
             self.err_check(self.rsa.TRIG_SetTriggerMode(c_int(mode_value)))
         else:
             raise RSAError("Invalid trigger mode input string.")
@@ -2183,7 +2261,7 @@ class RSA:
                 return status_str
 
     def SPECTRUM_Acquire(self, trace: str = 'Trace1', trace_points: int = 801,
-                         timeout_msec: int = 10) -> Tuple[np.ndarray, int]:
+                         timeout_msec: int = 50) -> Tuple[np.ndarray, int]:
         """
         Acquire spectrum trace.
 
@@ -2207,8 +2285,10 @@ class RSA:
         """
         self.DEVICE_Run()
         self.SPECTRUM_AcquireTrace()
-        while not self.SPECTRUM_WaitForTraceReady(timeout_msec):
-            pass
+        ready = False
+        while not ready:
+            ready = self.SPECTRUM_WaitForTraceReady(timeout_msec)
+            sleep(int(timeout_msec * 1e-3))
         return self.SPECTRUM_GetTrace(trace, trace_points)
 
     def IQBLK_Configure(self, cf: Union[float, int] = 1e9, ref_level: Union[float, int] = 0,
@@ -2232,7 +2312,7 @@ class RSA:
         self.IQBLK_SetIQBandwidth(iq_bw)
         self.IQBLK_SetIQRecordLength(record_length)
 
-    def IQBLK_Acquire(self, rec_len: int = 1024, timeout_ms: int = 10) -> Tuple[np.ndarray, np.ndarray]:
+    def IQBLK_Acquire(self, rec_len: int = 1024, timeout_ms: int = 50) -> Tuple[np.ndarray, np.ndarray]:
         """
         Acquire IQBLK data using IQBLK_GetIQDataDeinterleaved.
 
@@ -2252,6 +2332,53 @@ class RSA:
         """
         self.DEVICE_Run()
         self.IQBLK_AcquireIQData()
-        while not self.IQBLK_WaitForIQDataReady(timeout_ms):
-            pass
+        ready = False
+        while not ready:
+            ready = self.IQBLK_WaitForIQDataReady(timeout_ms)
+            sleep(int(timeout_ms * 1e-3))
         return self.IQBLK_GetIQDataDeinterleaved(req_length=rec_len)
+
+
+    def DEVICE_GetTemperature(self, unit: str = 'celsius') -> float:
+        """
+        Get the device temperature.
+
+        Parameters
+        ----------
+        unit: The unit for the returned temperature value. May
+            be any of 'celsius', 'fahrehnheit', 'kelvin', 'kelvins',
+            'c', 'f', or 'k' (case-insensitive). Defaults to 'celsius'.
+
+        Returns
+        -------
+        The device temperature in the specified units.
+        """
+        # Store previous frequency reference setting
+        old_fru = (c_char * _FREQ_REF_USER_SETTING_STRLEN)()
+        self.err_check(self.rsa.CONFIG_GetFreqRefUserSetting(byref(old_fru)))
+        old_fru = old_fru.value.decode('utf-8')
+
+        # Update frequency reference setting to update temperature value
+        self.CONFIG_SetFreqRefUserSetting(None)
+
+        # Retrieve new frequency reference setting
+        fru = self.CONFIG_GetFreqRefUserSetting()
+
+        # Restore previous frequency reference setting
+        if old_fru != 'Invalid User Setting':
+            self.CONFIG_SetFreqRefUserSetting(old_fru)
+
+        # Read back in value
+        temp_c = self.CONFIG_DecodeFreqRefUserSettingString(fru)['temperature']
+
+        # Handle unit conversion if needed
+        if unit.lower() in ['c', 'celsius']:
+            temp = temp_c
+        elif unit.lower() in ['f', 'fahrenheit']:
+            temp = (temp_c * 9. / 5.) + 32
+        elif unit.lower() in ['k', 'kelvin', 'kelvins']:
+            temp = temp_c + 273.15
+        else:
+            raise RSAError("Invalid temperature unit selection.")
+
+        return temp
