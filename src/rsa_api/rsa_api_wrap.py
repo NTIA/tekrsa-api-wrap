@@ -560,7 +560,17 @@ class RSA:
         self.err_check(self.rsa.CONFIG_GetFreqRefUserSetting(byref(o_usstr)))
         return o_usstr.value.decode('utf-8')
 
-    def CONFIG_SetFreqRefUserSetting(self, i_usstr: Union[str, None] = None):
+    def CONFIG_SetFreqRefUserSetting(self, i_usstr: Union[str, None] = None) -> None:
+        """
+        Set the Frequency Reference User-source setting value.
+
+        Parameters
+        ----------
+        i_usstr: The user setting string, which must be formatted as
+            by CONFIG_GetFreqRefUserSetting(). If this parameter is 
+            None (the default behavior), the current frequency reference
+            setting is copied to the User setting memory.
+        """
         if i_usstr is None:
             self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(None))
         else:
