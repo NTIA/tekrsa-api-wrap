@@ -105,9 +105,9 @@ This testing code was been adapted from the [Tektronix Cython RSA API testing co
 
 Build the Python package from the top level directory in this repository by running:
 
-`python3 -m pip install --upgrade build`
+`pip install build`
 
-`python3 -m build`
+`python -m build`
 
 ## License
 
