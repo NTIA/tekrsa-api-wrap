@@ -1,11 +1,9 @@
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-backend-path = ['src']
 
 [project]
-name = "rsa_api"
-version = "1.2.1"
+name = "tekrsa_api_wrap"
 description = "NTIA/ITS Python wrapper for the Tektronix RSA API for Linux"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -38,6 +36,7 @@ classifiers = [
 dependencies = [
     "numpy >= 1.22",
 ]
+dynamic = ["version"]
 
 [project.urls]
 "Repository" = "https://github.com/NTIA/tekrsa-api-wrap"
@@ -45,3 +44,8 @@ dependencies = [
 "NTIA GitHub" = "https://github.com/NTIA"
 "ITS Website" = "https://its.ntia.gov"
 "Tektronix Website" = "https://www.tek.com/en"
+
+[tool.hatch.version]
+path = "src/rsa_api/__about__.py"
+
+[tool.hatch.build.targets.wheel]
