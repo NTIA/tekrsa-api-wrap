@@ -103,11 +103,27 @@ This testing code was been adapted from the [Tektronix Cython RSA API testing co
 
 ## Development
 
-Build the Python package from the top level directory in this repository by running:
+This project uses [Hatch](https://github.com/pypa/hatch) for management and building.
+Install Hatch:
 
-`pip install build`
+```bash
+pip install hatch
+```
 
-`python -m build`
+After making updates, the package version can be updated easily using any of the following:
+
+```bash
+hatch version major  # 1.0.0 -> 2.0.0
+hatch version minor  # 1.0.0 -> 1.1.0
+hatch version micro  # 1.0.0 -> 1.0.1
+hatch version "X.X.X"  # 1.0.0 -> X.X.X
+```
+
+To build a wheel distribution and source distribution, run:
+
+```bash
+hatch build
+```
 
 ## License
 
