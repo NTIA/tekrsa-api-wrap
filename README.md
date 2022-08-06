@@ -1,7 +1,7 @@
 # NTIA/ITS Python Wrapper for Tektronix® RSA API for Linux
 
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/NTIA/tekrsa-api-wrap?display_name=tag&sort=semver)
-![GitHub all releases](https://img.shields.io/github/downloads/NTIA/tekrsa-api-wrap/total)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/tekrsa-api-wrap)
 ![GitHub issues](https://img.shields.io/github/issues/NTIA/tekrsa-api-wrap)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
@@ -46,11 +46,10 @@ them in the [SCOS Sensor](https://github.com/NTIA/scos-sensor/) drivers director
 drivers directory when instantiating the API wrapper. See the [Usage section](#usage)
 below for an example of how to do this.
 
-Next, download the most recent [release](https://github.com/NTIA/tekrsa-api-ntia/releases)
-of this package, and install it using `pip`:
+Next download and install this API wrapper using `pip`:
 
 ```bash
-pip install tekrsa_api_wrap-1.2.1-py3-none-any.whl
+pip install tekrsa_api_wrap
 ```
 
 ## Usage
