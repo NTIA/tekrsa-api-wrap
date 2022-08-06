@@ -4,7 +4,7 @@ from os.path import isdir
 from os import mkdir, environ
 from time import sleep
 
-import rsa_api
+import src.rsa_api as rsa_api
 
 """
 This is a test for the entire API Wrapper.

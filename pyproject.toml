@@ -1,6 +1,57 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tekrsa_api_wrap"
+dynamic = ["version"]
+description = "NTIA/ITS Python wrapper for the Tektronix RSA API for Linux"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { file = "LICENSE.md" }
+
+authors = [
+    { name = "The Institute for Telecommunication Sciences" },
+    { name="Anthony Romaniello", email="aromaniello@ntia.gov"}
 ]
-build-backend = "setuptools.build_meta"
+
+keywords = [
+    "api", "wrapper", "spectrum", "analyzer", "sdr", "rf",
+    "scos", "linux", "tektronix", "rsa"
+]
+
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Telecommunications Industry",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+
+dependencies = [
+    "numpy >= 1.22",
+]
+
+[project.urls]
+"Repository" = "https://github.com/NTIA/tekrsa-api-wrap"
+"Bug Tracker" = "https://github.com/NTIA/tekrsa-api-wrap/issues"
+"NTIA GitHub" = "https://github.com/NTIA"
+"ITS Website" = "https://its.ntia.gov"
+"Tektronix Website" = "https://www.tek.com/en"
+
+[tool.hatch.version]
+path = "src/rsa_api/__about__.py"
+
+[tool.hatch.build]
+skip-excluded-dirs = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rsa_api"]
+
+[tool.hatch.build.targets.sdist]

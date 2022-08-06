@@ -103,11 +103,31 @@ This testing code was been adapted from the [Tektronix Cython RSA API testing co
 
 ## Development
 
-Build the Python package from the top level directory in this repository by running:
+This project uses [Hatchling](https://github.com/pypa/hatch/tree/master/backend) as a
+backend. Hatchling makes version control and building new releases easy. First, install
+`hatchling` into your development environment:
 
-`pip install build`
+```bash
+pip install hatchling 
+```
 
-`python -m build`
+After making updates, the package version can be updated easily using any of the following:
+
+```bash
+hatchling version major  # 1.0.0 -> 2.0.0
+hatchling version minor  # 1.0.0 -> 1.1.0
+hatchling version micro  # 1.0.0 -> 1.0.1
+hatchling version "X.X.X"  # 1.0.0 -> X.X.X
+```
+
+To build a wheel distribution and source distribution, run:
+
+```bash
+hatchling build
+```
+
+When using `hatchling version`, there's no need to update package metadata with the new
+version number.
 
 ## License
 
