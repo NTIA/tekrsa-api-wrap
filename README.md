@@ -139,17 +139,34 @@ universal for all supported RSA devices.
 
 ## Development
 
-### Backend
+### Development Environment
 
-This project uses [Hatchling](https://github.com/pypa/hatch/tree/master/backend) as a
-backend. Hatchling makes version control and building new releases easy. First, install
-`hatchling` into your development environment:
+Set up a development environment using a tool like
+[Conda](https://docs.conda.io/en/latest/)
+or [venv](https://docs.python.org/3/library/venv.html#module-venv), with `python>=3.8`.
+Then, from the cloned directory, install the development dependencies by running:
 
 ```bash
-pip install hatchling
+pip install .[dev]
 ```
 
-After making updates, the package version can be updated easily using any of the following:
+This will install the project itself, along with development dependencies `hatchling`,
+`pre-commit`, and `twine`. Set up pre-commit, which runs auto-formatting and code-checking
+automatically when you make a commit, by running:
+
+```bash
+pre-commit install
+```
+
+The pre-commit tool will auto-format Python code using [Black](https://github.com/psf/black)
+and [isort](https://github.com/pycqa/isort). Other pre-commit hooks are also enabled, and
+can be found in [.pre-commit-config.yaml](.pre-commit-config.yaml).
+
+### Building New Releases
+
+This project uses [Hatchling](https://github.com/pypa/hatch/tree/master/backend) as a
+backend. Hatchling makes version control and building new releases easy. The package
+version can be updated easily using any of the following commands.
 
 ```bash
 hatchling version major  # 1.0.0 -> 2.0.0
@@ -166,32 +183,6 @@ hatchling build
 
 When using `hatchling version`, there's no need to update package metadata with the new
 version number.
-
-### Committing
-
-This project uses pre-commit, a utility which automates setting up pre-commit hooks. These
-hooks run the auto-formatters [Black](https://github.com/psf/black) and
-[isort](https://github.com/pycqa/isort). In addition to Black and isort, various other
-pre-commit tools are enabled including [markdownlint](https://github.com/DavidAnson/markdownlint).
-See [`.pre-commit-config.yaml`](.pre-commit-config.yaml) for the list of pre-commit tools
-enabled for this repository. Install pre-commit by running:
-
-```bash
-pip install pre-commit
-```
-
-Then simply type the following *once*, and each time you make a commit, it will be
-appropriately auto-formatted.
-
-```bash
-pre-commit install
-```
-
-You can also manually run the pre-commit hooks on the entire project:
-
-```bash
-pre-commit run --all-files
-```
 
 ## License
 
