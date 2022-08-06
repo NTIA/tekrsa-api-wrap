@@ -103,27 +103,31 @@ This testing code was been adapted from the [Tektronix Cython RSA API testing co
 
 ## Development
 
-This project uses [Hatch](https://github.com/pypa/hatch) for management and building.
-Install Hatch:
+This project uses [Hatchling](https://github.com/pypa/hatch/tree/master/backend) as a
+backend. Hatchling makes version control and building new releases easy. First, install
+`hatchling` into your development environment:
 
 ```bash
-pip install hatch
+pip install hatchling 
 ```
 
 After making updates, the package version can be updated easily using any of the following:
 
 ```bash
-hatch version major  # 1.0.0 -> 2.0.0
-hatch version minor  # 1.0.0 -> 1.1.0
-hatch version micro  # 1.0.0 -> 1.0.1
-hatch version "X.X.X"  # 1.0.0 -> X.X.X
+hatchling version major  # 1.0.0 -> 2.0.0
+hatchling version minor  # 1.0.0 -> 1.1.0
+hatchling version micro  # 1.0.0 -> 1.0.1
+hatchling version "X.X.X"  # 1.0.0 -> X.X.X
 ```
 
 To build a wheel distribution and source distribution, run:
 
 ```bash
-hatch build
+hatchling build
 ```
+
+When using `hatchling version`, there's no need to update package metadata with the new
+version number.
 
 ## License
 
