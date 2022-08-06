@@ -50,7 +50,7 @@ Next, download the most recent [release](https://github.com/NTIA/tekrsa-api-ntia
 of this package, and install it using `pip`:
 
 ```bash
-pip install tekrsa_api_wrap-1.2.0.tar.gz
+pip install tekrsa_api_wrap-1.2.1-py3-none-any.whl
 ```
 
 ## Usage
