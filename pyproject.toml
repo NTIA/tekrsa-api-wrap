@@ -37,6 +37,13 @@ dependencies = [
     "numpy >= 1.22",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "hatchling>=1.6.0,<2.0",
+    "pre-commit>=2.20.0,<3.0",
+    "twine>=4.0.1,<5.0"
+]
+
 [project.urls]
 "Repository" = "https://github.com/NTIA/tekrsa-api-wrap"
 "Bug Tracker" = "https://github.com/NTIA/tekrsa-api-wrap/issues"
