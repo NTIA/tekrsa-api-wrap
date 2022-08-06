@@ -1,16 +1,18 @@
-# Written for Tektronix RSA API for Linux v1.0.0014
-# Refer to the RSA API Programming Reference Manual for details
-# on any functions implemented from this module.
+"""
+Written for Tektronix RSA API for Linux v1.0.0014
+Refer to the RSA API Programming Reference Manual for details
+on any functions implemented from this module.
+"""
 import tempfile
 from ctypes import *
 from enum import Enum
 from os.path import abspath, join
 from time import sleep
-from typing import Union, Any, Tuple
+from typing import Any, Tuple, Union
 
 import numpy as np
 
-""" GLOBAL CONSTANTS """
+# GLOBAL CONSTANTS
 
 _MAX_NUM_DEVICES = 10  # Max num. of devices that could be found
 _MAX_SERIAL_STRLEN = 8  # Bytes allocated for serial number string
@@ -20,81 +22,100 @@ _FW_VERSION_STRLEN = 6  # Bytes allocated for FW version number string
 _HW_VERSION_STRLEN = 4  # Bytes allocated for HW version number string
 _NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
 _API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
-_FREQ_REF_USER_SETTING_STRLEN = 54  # Characters in frequency reference user setting string
-_DEVINFO_MAX_STRLEN = 19 # Datetime substring length in user setting string
+_FREQ_REF_USER_SETTING_STRLEN = (
+    54  # Characters in frequency reference user setting string
+)
+_DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
 
-""" ENUMERATION TUPLES """
+# ENUMERATION TUPLES
 
-_DEV_EVENT = ('OVERRANGE', 'TRIGGER', '1PPS')
-_FREQ_REF_SOURCE = ('INTERNAL', 'EXTREF', 'GNSS', 'USER')
-_IQS_OUT_DEST = ('CLIENT', 'FILE_TIQ', 'FILE_SIQ', 'FILE_SIQ_SPLIT')
-_IQS_OUT_DTYPE = ('SINGLE', 'INT32', 'INT16', 'SINGLE_SCALE_INT32')
-_SPECTRUM_DETECTORS = ('PosPeak', 'NegPeak', 'AverageVRMS', 'Sample')
-_SPECTRUM_TRACES = ('Trace1', 'Trace2', 'Trace3')
-_SPECTRUM_VERTICAL_UNITS = ('dBm', 'Watt', 'Volt', 'Amp', 'dBmV')
-_SPECTRUM_WINDOWS = ('Kaiser', 'Mil6dB', 'BlackmanHarris', 'Rectangular', 'FlatTop', 'Hann')
-_TRIGGER_MODE = ('freerun', 'triggered')
-_TRIGGER_SOURCE = ('External', 'IFPowerLevel')
-_TRIGGER_TRANSITION = ('LH', 'HL', 'Either')
+_DEV_EVENT = ("OVERRANGE", "TRIGGER", "1PPS")
+_FREQ_REF_SOURCE = ("INTERNAL", "EXTREF", "GNSS", "USER")
+_IQS_OUT_DEST = ("CLIENT", "FILE_TIQ", "FILE_SIQ", "FILE_SIQ_SPLIT")
+_IQS_OUT_DTYPE = ("SINGLE", "INT32", "INT16", "SINGLE_SCALE_INT32")
+_SPECTRUM_DETECTORS = ("PosPeak", "NegPeak", "AverageVRMS", "Sample")
+_SPECTRUM_TRACES = ("Trace1", "Trace2", "Trace3")
+_SPECTRUM_VERTICAL_UNITS = ("dBm", "Watt", "Volt", "Amp", "dBmV")
+_SPECTRUM_WINDOWS = (
+    "Kaiser",
+    "Mil6dB",
+    "BlackmanHarris",
+    "Rectangular",
+    "FlatTop",
+    "Hann",
+)
+_TRIGGER_MODE = ("freerun", "triggered")
+_TRIGGER_SOURCE = ("External", "IFPowerLevel")
+_TRIGGER_TRANSITION = ("LH", "HL", "Either")
 
-""" CUSTOM DATA STRUCTURES """
+# CUSTOM DATA STRUCTURES
+
 
 class _FreqRefUserInfo(Structure):
-    _fields_ = [('isvalid', c_bool),
-                ('dacValue', c_uint32),
-                ('datetime', c_char * _DEVINFO_MAX_STRLEN),
-                ('temperature', c_double)]
+    _fields_ = [
+        ("isvalid", c_bool),
+        ("dacValue", c_uint32),
+        ("datetime", c_char * _DEVINFO_MAX_STRLEN),
+        ("temperature", c_double),
+    ]
 
 
 class _SpectrumLimits(Structure):
-    _fields_ = [('maxSpan', c_double),
-                ('minSpan', c_double),
-                ('maxRBW', c_double),
-                ('minRBW', c_double),
-                ('maxVBW', c_double),
-                ('minVBW', c_double),
-                ('maxTraceLength', c_int),  # Incorrectly documented as a double
-                ('minTraceLength', c_int)]  # Incorrectly documented as a double
+    _fields_ = [
+        ("maxSpan", c_double),
+        ("minSpan", c_double),
+        ("maxRBW", c_double),
+        ("minRBW", c_double),
+        ("maxVBW", c_double),
+        ("minVBW", c_double),
+        ("maxTraceLength", c_int),  # Incorrectly documented as a double
+        ("minTraceLength", c_int),
+    ]  # Incorrectly documented as a double
 
 
 class _SpectrumSettings(Structure):
-    _fields_ = [('span', c_double),
-                ('rbw', c_double),
-                ('enableVBW', c_bool),
-                ('vbw', c_double),
-                ('traceLength', c_int),
-                ('window', c_int),
-                ('verticalUnit', c_int),
-                ('actualStartFreq', c_double),
-                ('actualStopFreq', c_double),
-                ('actualFreqStepSize', c_double),
-                ('actualRBW', c_double),
-                ('actualVBW', c_double),
-                ('actualNumIQSamples', c_int)]
+    _fields_ = [
+        ("span", c_double),
+        ("rbw", c_double),
+        ("enableVBW", c_bool),
+        ("vbw", c_double),
+        ("traceLength", c_int),
+        ("window", c_int),
+        ("verticalUnit", c_int),
+        ("actualStartFreq", c_double),
+        ("actualStopFreq", c_double),
+        ("actualFreqStepSize", c_double),
+        ("actualRBW", c_double),
+        ("actualVBW", c_double),
+        ("actualNumIQSamples", c_int),
+    ]
 
 
 class _SpectrumTraceInfo(Structure):
-    _fields_ = [('timestamp', c_int64),
-                ('acqDataStatus', c_uint16)]
+    _fields_ = [("timestamp", c_int64), ("acqDataStatus", c_uint16)]
 
 
 class _IQBlkAcqInfo(Structure):
-    _fields_ = [('sample0Timestamp', c_uint64),
-                ('triggerSampleIndex', c_uint64),
-                ('triggerTimestamp', c_uint64),
-                ('acqStatus', c_uint32)]
+    _fields_ = [
+        ("sample0Timestamp", c_uint64),
+        ("triggerSampleIndex", c_uint64),
+        ("triggerTimestamp", c_uint64),
+        ("acqStatus", c_uint32),
+    ]
 
 
 class _IQStreamFileInfo(Structure):
-    _fields_ = [('numberSamples', c_uint64),
-                ('sample0Timestamp', c_uint64),
-                ('triggerSampleIndex', c_uint64),
-                ('triggerTimestamp', c_uint64),
-                ('acqStatus', c_uint32),
-                ('filenames', c_wchar_p)]
+    _fields_ = [
+        ("numberSamples", c_uint64),
+        ("sample0Timestamp", c_uint64),
+        ("triggerSampleIndex", c_uint64),
+        ("triggerTimestamp", c_uint64),
+        ("acqStatus", c_uint32),
+        ("filenames", c_wchar_p),
+    ]
 
 
-""" ERROR HANDLING """
+# ERROR HANDLING
 
 
 class RSAError(Exception):
@@ -105,15 +126,14 @@ class RSAError(Exception):
 
 
 class RSA:
-
-    def __init__(self, so_dir: str = '/drivers/'):
-        """ Load the RSA USB Driver """
+    def __init__(self, so_dir: str = "/drivers/"):
+        """Load the RSA USB Driver"""
         # Param. 'so_dir' is the directory containing libRSA_API.so and
         # libcyusb_shared.so.
         rtld_lazy = 0x0001
         lazy_load = rtld_lazy | RTLD_GLOBAL
-        self.rsa = CDLL(join(abspath(so_dir), 'libRSA_API.so'), lazy_load)
-        self.usb_api = CDLL(join(abspath(so_dir), 'libcyusb_shared.so'), lazy_load)
+        self.rsa = CDLL(join(abspath(so_dir), "libRSA_API.so"), lazy_load)
+        self.usb_api = CDLL(join(abspath(so_dir), "libcyusb_shared.so"), lazy_load)
 
     """ ERROR HANDLING """
 
@@ -214,7 +234,7 @@ class RSA:
         errorCalConfigInvalid = 3309
 
         # flash
-        errorFlashFileSystemUnexpectedSize = 3401,
+        errorFlashFileSystemUnexpectedSize = (3401,)
         errorFlashFileSystemNotMounted = 3402
         errorFlashFileSystemOutOfRange = 3403
         errorFlashFileSystemIndexNotFound = 3404
@@ -237,7 +257,7 @@ class RSA:
         errorFlashFileSystemCreateFile = 3421
 
         # Aux monitoring
-        errorMonitoringNotSupported = 3501,
+        errorMonitoringNotSupported = (3501,)
         errorAuxDataNotAvailable = 3502
 
         # battery
@@ -276,22 +296,30 @@ class RSA:
         if self.ReturnStatus(rs) != self.ReturnStatus.noError:
             raise RSAError(self.ReturnStatus(rs).name)
 
-    """ INPUT VALIDATION """
+    # INPUT VALIDATION
 
     @staticmethod
-    def check_range(in_var: Union[float, int], min_val: Union[float, int],
-                    max_val: Union[float, int], incl: bool = True) -> Union[float, int]:
+    def check_range(
+        in_var: Union[float, int],
+        min_val: Union[float, int],
+        max_val: Union[float, int],
+        incl: bool = True,
+    ) -> Union[float, int]:
         """Check if input is in valid range, inclusive or exclusive"""
         if incl:
             if min_val <= in_var <= max_val:
                 return in_var
             else:
-                raise ValueError(f"Input must be in range {min_val} to {max_val}, inclusive.")
+                raise ValueError(
+                    f"Input must be in range {min_val} to {max_val}, inclusive."
+                )
         else:
             if min_val < in_var < max_val:
                 return in_var
             else:
-                raise ValueError(f"Input must be in range {min_val} to {max_val}, exclusive.")
+                raise ValueError(
+                    f"Input must be in range {min_val} to {max_val}, exclusive."
+                )
 
     @staticmethod
     def check_int(value: Any) -> int:
@@ -328,7 +356,7 @@ class RSA:
         else:
             raise TypeError("Input must be a boolean.")
 
-    """ ALIGNMENT METHODS """
+    # ALIGNMENT METHODS
 
     def ALIGN_GetAlignmentNeeded(self) -> bool:
         """
@@ -361,10 +389,10 @@ class RSA:
         """Run the device alignment process."""
         self.err_check(self.rsa.ALIGN_RunAlignment())
 
-    """ AUDIO METHODS NOT IMPLEMENTED """
-    """ BROKEN IN RSA API FOR LINUX v1.0.0014 """
+    # AUDIO METHODS NOT IMPLEMENTED
+    # BROKEN IN RSA API FOR LINUX v1.0.0014
 
-    """ CONFIG METHODS """
+    # CONFIG METHODS
 
     def CONFIG_GetCenterFreq(self) -> float:
         """Return the current center frequency in Hz."""
@@ -463,7 +491,9 @@ class RSA:
             Value to set center frequency, in Hz.
         """
         cf = RSA.check_num(cf)
-        cf = RSA.check_range(cf, self.CONFIG_GetMinCenterFreq(), self.CONFIG_GetMaxCenterFreq())
+        cf = RSA.check_range(
+            cf, self.CONFIG_GetMinCenterFreq(), self.CONFIG_GetMaxCenterFreq()
+        )
         self.err_check(self.rsa.CONFIG_SetCenterFreq(c_double(cf)))
 
     def CONFIG_DecodeFreqRefUserSettingString(self, i_usstr: str) -> dict:
@@ -483,15 +513,18 @@ class RSA:
             'temperature' (float) : Device temperature when user setting data
                 was created.
         """
-        i_usstr = c_char_p(i_usstr.encode('utf-8'))
+        i_usstr = c_char_p(i_usstr.encode("utf-8"))
         o_fui = _FreqRefUserInfo()
-        self.err_check(self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui)))
+        self.err_check(
+            self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
+        )
         # Temperature result is always 0, so manually parse the input string
-        temperature = float(i_usstr.value.decode('utf-8')[-8:-3])
-        fui = {'isvalid': o_fui.isvalid,
-               'dacValue': o_fui.dacValue,
-               'datetime': o_fui.datetime.decode('utf-8'),
-               'temperature': temperature
+        temperature = float(i_usstr.value.decode("utf-8")[-8:-3])
+        fui = {
+            "isvalid": o_fui.isvalid,
+            "dacValue": o_fui.dacValue,
+            "datetime": o_fui.datetime.decode("utf-8"),
+            "temperature": temperature,
         }
         return fui
 
@@ -528,7 +561,7 @@ class RSA:
         global _FREQ_REF_SOURCE
         src = RSA.check_string(src)
         if src in _FREQ_REF_SOURCE:
-            if src == 'GNSS' and self.DEVICE_GetNomenclature() in ['RSA306', 'RSA306B']:
+            if src == "GNSS" and self.DEVICE_GetNomenclature() in ["RSA306", "RSA306B"]:
                 raise RSAError("RSA 300 series device does not support GNSS reference.")
             else:
                 value = c_int(_FREQ_REF_SOURCE.index(src))
@@ -552,13 +585,13 @@ class RSA:
                 "YYY-MM-DDThh:mm:ss"
             <devTemp> : device temperature (degC) at creation
             <CS> : integer checksum of characters before '*'
-        
+
         If the User setting is not valid, then the user string result
         returns the string "Invalid User Setting"
         """
         o_usstr = (c_char * _FREQ_REF_USER_SETTING_STRLEN)()
         self.err_check(self.rsa.CONFIG_GetFreqRefUserSetting(byref(o_usstr)))
-        return o_usstr.value.decode('utf-8')
+        return o_usstr.value.decode("utf-8")
 
     def CONFIG_SetFreqRefUserSetting(self, i_usstr: Union[str, None] = None) -> None:
         """
@@ -567,7 +600,7 @@ class RSA:
         Parameters
         ----------
         i_usstr: The user setting string, which must be formatted as
-            by CONFIG_GetFreqRefUserSetting(). If this parameter is 
+            by CONFIG_GetFreqRefUserSetting(). If this parameter is
             None (the default behavior), the current frequency reference
             setting is copied to the User setting memory.
         """
@@ -575,9 +608,12 @@ class RSA:
             self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(None))
         else:
             RSA.check_string(i_usstr)
-            if i_usstr == 'Invalid User Setting' or len(i_usstr) != _FREQ_REF_USER_SETTING_STRLEN:
+            if (
+                i_usstr == "Invalid User Setting"
+                or len(i_usstr) != _FREQ_REF_USER_SETTING_STRLEN
+            ):
                 raise RSAError("User setting is invalid.")
-            i_usstr = c_char_p(i_usstr.encode('utf-8'))
+            i_usstr = c_char_p(i_usstr.encode("utf-8"))
             self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(i_usstr))
 
     def CONFIG_SetReferenceLevel(self, ref_level: Union[float, int]) -> None:
@@ -640,9 +676,9 @@ class RSA:
     def CONFIG_SetRFPreampEnable(self, enable: bool) -> None:
         """
         Set the RF Preamplifier enable state.
-        
+
         The device Run state is cycled in order to apply the setting.
-        
+
         Parameters
         ----------
         enable : bool
@@ -684,7 +720,7 @@ class RSA:
         self.err_check(self.rsa.CONFIG_SetRFAttenuator(c_double(value)))
         self.rsa.DEVICE_Run()
 
-    """ DEVICE METHODS """
+    # DEVICE METHODS
 
     def DEVICE_Connect(self, device_id: int = 0) -> None:
         """
@@ -696,7 +732,7 @@ class RSA:
             The device ID of the target device. Defaults to zero.
         """
         device_id = RSA.check_int(device_id)
-        device_id = RSA.check_range(device_id, 0, float('inf'))
+        device_id = RSA.check_range(device_id, 0, float("inf"))
         self.err_check(self.rsa.DEVICE_Connect(c_int(device_id)))
 
     def DEVICE_Disconnect(self) -> None:
@@ -729,7 +765,7 @@ class RSA:
         global _FPGA_VERSION_STRLEN
         fpga_version = (c_char * _FPGA_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFPGAVersion(byref(fpga_version)))
-        return fpga_version.value.decode('utf-8')
+        return fpga_version.value.decode("utf-8")
 
     def DEVICE_GetFWVersion(self) -> str:
         """
@@ -743,7 +779,7 @@ class RSA:
         global _FW_VERSION_STRLEN
         fw_version = (c_char * _FW_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFWVersion(byref(fw_version)))
-        return fw_version.value.decode('utf-8')
+        return fw_version.value.decode("utf-8")
 
     def DEVICE_GetHWVersion(self) -> str:
         """
@@ -757,7 +793,7 @@ class RSA:
         global _HW_VERSION_STRLEN
         hw_version = (c_char * _HW_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetHWVersion(byref(hw_version)))
-        return hw_version.value.decode('utf-8')
+        return hw_version.value.decode("utf-8")
 
     def DEVICE_GetNomenclature(self) -> str:
         """
@@ -771,7 +807,7 @@ class RSA:
         global _NOMENCLATURE_STRLEN
         nomenclature = (c_char * _NOMENCLATURE_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetNomenclature(byref(nomenclature)))
-        return nomenclature.value.decode('utf-8')
+        return nomenclature.value.decode("utf-8")
 
     def DEVICE_GetSerialNumber(self) -> str:
         """
@@ -785,7 +821,7 @@ class RSA:
         global _MAX_SERIAL_STRLEN
         serial_num = (c_char * _MAX_SERIAL_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetSerialNumber(byref(serial_num)))
-        return serial_num.value.decode('utf-8')
+        return serial_num.value.decode("utf-8")
 
     def DEVICE_GetAPIVersion(self) -> str:
         """
@@ -799,7 +835,7 @@ class RSA:
         global _API_VERSION_STRLEN
         api_version = (c_char * _API_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetAPIVersion(byref(api_version)))
-        return api_version.value.decode('utf-8')
+        return api_version.value.decode("utf-8")
 
     def DEVICE_PrepareForRun(self) -> None:
         """
@@ -829,7 +865,7 @@ class RSA:
             "fwVersion": fw_version,
             "fpgaVersion": fpga_version,
             "hwVersion": hw_version,
-            "apiVersion": api_version
+            "apiVersion": api_version,
         }
         return info
 
@@ -901,14 +937,19 @@ class RSA:
         dev_type = ((c_char * _MAX_NUM_DEVICES) * _MAX_DEVTYPE_STRLEN)()
 
         self.err_check(
-            self.rsa.DEVICE_Search(byref(num_found), byref(dev_ids), dev_serial, dev_type))
+            self.rsa.DEVICE_Search(
+                byref(num_found), byref(dev_ids), dev_serial, dev_type
+            )
+        )
 
-        found_devices = {ID: (dev_serial[ID].value.decode(), dev_type[ID].value.decode())
-                         for ID in dev_ids}
+        found_devices = {
+            ID: (dev_serial[ID].value.decode(), dev_type[ID].value.decode())
+            for ID in dev_ids
+        }
 
         # If there are no devices, there is still a dict returned
         # with a device ID, but the other elements are empty.
-        if found_devices[0] == ('', ''):
+        if found_devices[0] == ("", ""):
             raise RSAError("Could not find a matching Tektronix RSA device.")
         else:
             return found_devices
@@ -957,14 +998,15 @@ class RSA:
             value = c_int(_DEV_EVENT.index(event_id))
         else:
             raise RSAError("Input string does not match one of the valid settings.")
-        self.err_check(self.rsa.DEVICE_GetEventStatus(value, byref(occurred),
-                                                      byref(timestamp)))
+        self.err_check(
+            self.rsa.DEVICE_GetEventStatus(value, byref(occurred), byref(timestamp))
+        )
         return occurred.value, timestamp.value
 
-    """ GNSS METHODS NOT IMPLEMENTED """
-    """ BROKEN IN RSA API FOR LINUX v1.0.0014 """
+    # GNSS METHODS NOT IMPLEMENTED
+    # BROKEN IN RSA API FOR LINUX v1.0.0014
 
-    """ IQ BLOCK METHODS """
+    # IQ BLOCK METHODS
 
     def IQBLK_GetIQAcqInfo(self) -> Tuple[int, int, int, int]:
         """
@@ -983,8 +1025,12 @@ class RSA:
         """
         acq_info = _IQBlkAcqInfo()
         self.err_check(self.rsa.IQBLK_GetIQAcqInfo(byref(acq_info)))
-        info = (acq_info.sample0Timestamp.value, acq_info.triggerSampleIndex.value,
-                acq_info.triggerTimestamp.value, acq_info.acqStatus.value)
+        info = (
+            acq_info.sample0Timestamp.value,
+            acq_info.triggerSampleIndex.value,
+            acq_info.triggerTimestamp.value,
+            acq_info.acqStatus.value,
+        )
         return info
 
     def IQBLK_AcquireIQData(self) -> None:
@@ -1030,10 +1076,15 @@ class RSA:
         out_length = c_int()
         iq_data = (c_float * (req_length * 2))()
         self.err_check(
-            self.rsa.IQBLK_GetIQData(byref(iq_data), byref(out_length), c_int(req_length)))
+            self.rsa.IQBLK_GetIQData(
+                byref(iq_data), byref(out_length), c_int(req_length)
+            )
+        )
         return np.ctypeslib.as_array(iq_data)
 
-    def IQBLK_GetIQDataDeinterleaved(self, req_length: int) -> Tuple[np.ndarray, np.ndarray]:
+    def IQBLK_GetIQDataDeinterleaved(
+        self, req_length: int
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Retrieve an IQ block data record in separate I and Q array format.
 
@@ -1057,8 +1108,11 @@ class RSA:
         i_data = (c_float * req_length)()
         q_data = (c_float * req_length)()
         out_length = c_int()
-        self.err_check(self.rsa.IQBLK_GetIQDataDeinterleaved(byref(i_data), byref(q_data),
-                                                             byref(out_length), c_int(req_length)))
+        self.err_check(
+            self.rsa.IQBLK_GetIQDataDeinterleaved(
+                byref(i_data), byref(q_data), byref(out_length), c_int(req_length)
+            )
+        )
         return np.ctypeslib.as_array(i_data), np.ctypeslib.as_array(q_data)
 
     def IQBLK_GetIQRecordLength(self) -> int:
@@ -1136,8 +1190,9 @@ class RSA:
             IQ bandwidth value measured in Hz
         """
         iq_bandwidth = RSA.check_num(iq_bandwidth)
-        iq_bandwidth = RSA.check_range(iq_bandwidth, self.IQBLK_GetMinIQBandwidth(),
-                                       self.IQBLK_GetMaxIQBandwidth())
+        iq_bandwidth = RSA.check_range(
+            iq_bandwidth, self.IQBLK_GetMinIQBandwidth(), self.IQBLK_GetMaxIQBandwidth()
+        )
         self.err_check(self.rsa.IQBLK_SetIQBandwidth(c_double(iq_bandwidth)))
 
     def IQBLK_SetIQRecordLength(self, record_length: int) -> None:
@@ -1150,7 +1205,9 @@ class RSA:
             IQ record length, measured in samples. Minimum value of 2.
         """
         record_length = RSA.check_int(record_length)
-        record_length = RSA.check_range(record_length, 2, self.IQBLK_GetMaxIQRecordLength())
+        record_length = RSA.check_range(
+            record_length, 2, self.IQBLK_GetMaxIQRecordLength()
+        )
         self.err_check(self.rsa.IQBLK_SetIQRecordLength(c_int(record_length)))
 
     def IQBLK_WaitForIQDataReady(self, timeout_msec: int) -> bool:
@@ -1170,10 +1227,12 @@ class RSA:
         """
         timeout_msec = RSA.check_int(timeout_msec)
         ready = c_bool()
-        self.err_check(self.rsa.IQBLK_WaitForIQDataReady(c_int(timeout_msec), byref(ready)))
+        self.err_check(
+            self.rsa.IQBLK_WaitForIQDataReady(c_int(timeout_msec), byref(ready))
+        )
         return ready.value
 
-    """ IQ STREAM METHODS """
+    # IQ STREAM METHODS
 
     def IQSTREAM_GetMaxAcqBandwidth(self) -> float:
         """
@@ -1222,7 +1281,9 @@ class RSA:
         """
         bw_hz_act = c_double()
         sr_sps = c_double()
-        self.err_check(self.rsa.IQSTREAM_GetAcqParameters(byref(bw_hz_act), byref(sr_sps)))
+        self.err_check(
+            self.rsa.IQSTREAM_GetAcqParameters(byref(bw_hz_act), byref(sr_sps))
+        )
         return bw_hz_act.value, sr_sps.value
 
     def IQSTREAM_GetDiskFileInfo(self) -> _IQStreamFileInfo:
@@ -1297,8 +1358,11 @@ class RSA:
         """
         is_complete = c_bool()
         is_writing = c_bool()
-        self.err_check(self.rsa.IQSTREAM_GetDiskFileWriteStatus(byref(is_complete),
-                                                                byref(is_writing)))
+        self.err_check(
+            self.rsa.IQSTREAM_GetDiskFileWriteStatus(
+                byref(is_complete), byref(is_writing)
+            )
+        )
         return is_complete.value, is_writing.value
 
     def IQSTREAM_GetEnable(self) -> bool:
@@ -1341,8 +1405,11 @@ class RSA:
             Requested acquisition bandwidth of IQ streaming data, in Hz.
         """
         bw_hz_req = RSA.check_num(bw_hz_req)
-        bw_hz_req = RSA.check_range(bw_hz_req, self.IQSTREAM_GetMinAcqBandwidth(),
-                                    self.IQSTREAM_GetMaxAcqBandwidth())
+        bw_hz_req = RSA.check_range(
+            bw_hz_req,
+            self.IQSTREAM_GetMinAcqBandwidth(),
+            self.IQSTREAM_GetMaxAcqBandwidth(),
+        )
         self.rsa.DEVICE_Stop()
         self.err_check(self.rsa.IQSTREAM_SetAcqBandwidth(c_double(bw_hz_req)))
         self.rsa.DEVICE_Run()
@@ -1357,7 +1424,7 @@ class RSA:
             Length of time in milliseconds to record IQ samples to file.
         """
         msec = RSA.check_int(msec)
-        msec = RSA.check_range(msec, 0, float('inf'))
+        msec = RSA.check_range(msec, 0, float("inf"))
         self.err_check(self.rsa.IQSTREAM_SetDiskFileLength(c_int(msec)))
 
     def IQSTREAM_SetDiskFilenameBase(self, filename_base: str) -> None:
@@ -1382,7 +1449,7 @@ class RSA:
             The filename suffix control value.
         """
         suffix_ctl = RSA.check_int(suffix_ctl)
-        suffix_ctl = RSA.check_range(suffix_ctl, -2, float('inf'))
+        suffix_ctl = RSA.check_range(suffix_ctl, -2, float("inf"))
         self.err_check(self.rsa.IQSTREAM_SetDiskFilenameSuffix(c_int(suffix_ctl)))
 
     def IQSTREAM_SetIQDataBufferSize(self, req_size: int) -> None:
@@ -1433,8 +1500,10 @@ class RSA:
         dtype = RSA.check_string(dtype)
         if dest in _IQS_OUT_DEST and dtype in _IQS_OUT_DTYPE:
             if dest == "FILE_TIQ" and "SINGLE" in dtype:
-                raise RSAError("Invalid selection of TIQ file with"
-                               + " single precision data type.")
+                raise RSAError(
+                    "Invalid selection of TIQ file with"
+                    + " single precision data type."
+                )
             else:
                 val1 = c_int(_IQS_OUT_DEST.index(dest))
                 val2 = c_int(_IQS_OUT_DTYPE.index(dtype))
@@ -1469,17 +1538,19 @@ class RSA:
             Ready status. True if data is ready, False if data not ready.
         """
         timeout_msec = RSA.check_int(timeout_msec)
-        timeout_msec = RSA.check_range(timeout_msec, 0, float('inf'))
+        timeout_msec = RSA.check_range(timeout_msec, 0, float("inf"))
         ready = c_bool()
-        self.err_check(self.rsa.IQSTREAM_WaitForIQDataReady(c_int(timeout_msec), byref(ready)))
+        self.err_check(
+            self.rsa.IQSTREAM_WaitForIQDataReady(c_int(timeout_msec), byref(ready))
+        )
         return ready.value
 
-    """ PLAYBACK METHODS NOT IMPLEMENTED """
+    # PLAYBACK METHODS NOT IMPLEMENTED
 
-    """ POWER METHODS NOT IMPLEMENTED """
-    """ BROKEN IN RSA API FOR LINUX v1.0.0014 """
+    # POWER METHODS NOT IMPLEMENTED
+    # BROKEN IN RSA API FOR LINUX v1.0.0014
 
-    """ SPECTRUM METHODS """
+    # SPECTRUM METHODS
 
     def SPECTRUM_AcquireTrace(self) -> None:
         """
@@ -1526,12 +1597,16 @@ class RSA:
         """
         limits = _SpectrumLimits()
         self.err_check(self.rsa.SPECTRUM_GetLimits(byref(limits)))
-        limits_dict = {'maxSpan': limits.maxSpan,
-                       'minSpan': limits.minSpan, 'maxRBW': limits.maxRBW,
-                       'minRBW': limits.minRBW, 'maxVBW': limits.maxVBW,
-                       'minVBW': limits.minVBW, 'maxTraceLength': limits.maxTraceLength,
-                       'minTraceLength': limits.minTraceLength
-                       }
+        limits_dict = {
+            "maxSpan": limits.maxSpan,
+            "minSpan": limits.minSpan,
+            "maxRBW": limits.maxRBW,
+            "minRBW": limits.minRBW,
+            "maxVBW": limits.maxVBW,
+            "minVBW": limits.minVBW,
+            "maxTraceLength": limits.maxTraceLength,
+            "minTraceLength": limits.minTraceLength,
+        }
         return limits_dict
 
     def SPECTRUM_GetSettings(self) -> dict:
@@ -1571,22 +1646,26 @@ class RSA:
         global _SPECTRUM_WINDOWS, _SPECTRUM_VERTICAL_UNITS
         sets = _SpectrumSettings()
         self.err_check(self.rsa.SPECTRUM_GetSettings(byref(sets)))
-        settings_dict = {'span': sets.span,
-                         'rbw': sets.rbw,
-                         'enableVBW': sets.enableVBW,
-                         'vbw': sets.vbw,
-                         'traceLength': sets.traceLength,
-                         'window': _SPECTRUM_WINDOWS[sets.window],
-                         'verticalUnit': _SPECTRUM_VERTICAL_UNITS[sets.verticalUnit],
-                         'actualStartFreq': sets.actualStartFreq,
-                         'actualStopFreq': sets.actualStopFreq,
-                         'actualFreqStepSize': sets.actualFreqStepSize,
-                         'actualRBW': sets.actualRBW,
-                         'actualVBW': sets.actualVBW,
-                         'actualNumIQSamples': sets.actualNumIQSamples}
+        settings_dict = {
+            "span": sets.span,
+            "rbw": sets.rbw,
+            "enableVBW": sets.enableVBW,
+            "vbw": sets.vbw,
+            "traceLength": sets.traceLength,
+            "window": _SPECTRUM_WINDOWS[sets.window],
+            "verticalUnit": _SPECTRUM_VERTICAL_UNITS[sets.verticalUnit],
+            "actualStartFreq": sets.actualStartFreq,
+            "actualStopFreq": sets.actualStopFreq,
+            "actualFreqStepSize": sets.actualFreqStepSize,
+            "actualRBW": sets.actualRBW,
+            "actualVBW": sets.actualVBW,
+            "actualNumIQSamples": sets.actualNumIQSamples,
+        }
         return settings_dict
 
-    def SPECTRUM_GetTrace(self, trace: str, max_trace_points: int) -> Tuple[np.ndarray, int]:
+    def SPECTRUM_GetTrace(
+        self, trace: str, max_trace_points: int
+    ) -> Tuple[np.ndarray, int]:
         """
         Return the spectrum trace data.
 
@@ -1620,8 +1699,14 @@ class RSA:
             raise RSAError("Invalid trace input.")
         trace_data = (c_float * max_trace_points)()
         out_trace_points = c_int()
-        self.err_check(self.rsa.SPECTRUM_GetTrace(trace_val, c_int(max_trace_points),
-                                                  byref(trace_data), byref(out_trace_points)))
+        self.err_check(
+            self.rsa.SPECTRUM_GetTrace(
+                trace_val,
+                c_int(max_trace_points),
+                byref(trace_data),
+                byref(out_trace_points),
+            )
+        )
         return np.ctypeslib.as_array(trace_data), out_trace_points.value
 
     def SPECTRUM_GetTraceInfo(self) -> dict:
@@ -1639,8 +1724,10 @@ class RSA:
         """
         trace_info = _SpectrumTraceInfo()
         self.err_check(self.rsa.SPECTRUM_GetTraceInfo(byref(trace_info)))
-        info_dict = {'timestamp': trace_info.timestamp,
-                     'acqDataStatus': trace_info.acqDataStatus}
+        info_dict = {
+            "timestamp": trace_info.timestamp,
+            "acqDataStatus": trace_info.acqDataStatus,
+        }
         return info_dict
 
     def SPECTRUM_GetTraceType(self, trace: str) -> Tuple[bool, str]:
@@ -1673,7 +1760,9 @@ class RSA:
             raise RSAError("Invalid trace input.")
         enable = c_bool()
         detector = c_int()
-        self.err_check(self.rsa.SPECTRUM_GetTraceType(trace_val, byref(enable), byref(detector)))
+        self.err_check(
+            self.rsa.SPECTRUM_GetTraceType(trace_val, byref(enable), byref(detector))
+        )
         return enable.value, _SPECTRUM_DETECTORS[detector.value]
 
     def SPECTRUM_SetDefault(self) -> None:
@@ -1694,9 +1783,16 @@ class RSA:
         enable = RSA.check_bool(enable)
         self.err_check(self.rsa.SPECTRUM_SetEnable(c_bool(enable)))
 
-    def SPECTRUM_SetSettings(self, span: Union[float, int], rbw: Union[float, int],
-                             enable_vbw: bool, vbw: Union[float, int], trace_len: int,
-                             win: str, vert_unit: str) -> None:
+    def SPECTRUM_SetSettings(
+        self,
+        span: Union[float, int],
+        rbw: Union[float, int],
+        enable_vbw: bool,
+        vbw: Union[float, int],
+        trace_len: int,
+        win: str,
+        vert_unit: str,
+    ) -> None:
         """
         Set the spectrum settings.
 
@@ -1740,8 +1836,9 @@ class RSA:
         else:
             raise RSAError("Window or vertical unit input invalid.")
 
-    def SPECTRUM_SetTraceType(self, trace: str = 'Trace1', enable: bool = True,
-                              detector: str = 'AverageVRMS') -> None:
+    def SPECTRUM_SetTraceType(
+        self, trace: str = "Trace1", enable: bool = True, detector: str = "AverageVRMS"
+    ) -> None:
         """
         Set the trace settings.
 
@@ -1767,7 +1864,9 @@ class RSA:
         if trace in _SPECTRUM_TRACES and detector in _SPECTRUM_DETECTORS:
             trace_val = c_int(_SPECTRUM_TRACES.index(trace))
             det_val = c_int(_SPECTRUM_DETECTORS.index(detector))
-            self.err_check(self.rsa.SPECTRUM_SetTraceType(trace_val, c_bool(enable), det_val))
+            self.err_check(
+                self.rsa.SPECTRUM_SetTraceType(trace_val, c_bool(enable), det_val)
+            )
         else:
             raise RSAError("Trace or detector type input invalid.")
 
@@ -1788,10 +1887,12 @@ class RSA:
         """
         timeout_msec = RSA.check_int(timeout_msec)
         ready = c_bool()
-        self.err_check(self.rsa.SPECTRUM_WaitForTraceReady(c_int(timeout_msec), byref(ready)))
+        self.err_check(
+            self.rsa.SPECTRUM_WaitForTraceReady(c_int(timeout_msec), byref(ready))
+        )
         return ready.value
 
-    """ TRIGGER METHODS """
+    # TRIGGER METHODS
 
     def TRIG_ForceTrigger(self) -> None:
         """Force the device to trigger."""
@@ -1906,7 +2007,9 @@ class RSA:
         else:
             raise RSAError("Invalid trigger mode input string.")
 
-    def TRIG_SetTriggerPositionPercent(self, trig_pos_percent: Union[float, int] = 50) -> None:
+    def TRIG_SetTriggerPositionPercent(
+        self, trig_pos_percent: Union[float, int] = 50
+    ) -> None:
         """
         Set the trigger position percentage.
 
@@ -1917,7 +2020,9 @@ class RSA:
         """
         trig_pos_percent = RSA.check_num(trig_pos_percent)
         trig_pos_percent = RSA.check_range(trig_pos_percent, 1, 99)
-        self.err_check(self.rsa.TRIG_SetTriggerPositionPercent(c_double(trig_pos_percent)))
+        self.err_check(
+            self.rsa.TRIG_SetTriggerPositionPercent(c_double(trig_pos_percent))
+        )
 
     def TRIG_SetTriggerSource(self, source: str) -> None:
         """
@@ -1968,7 +2073,7 @@ class RSA:
         else:
             raise RSAError("Invalid trigger transition mode input string.")
 
-    """ HELPER METHODS """
+    # HELPER METHODS
 
     def DEVICE_SearchAndConnect(self, verbose: bool = False) -> None:
         """
@@ -1997,13 +2102,13 @@ class RSA:
         num_found = len(found_devices)
 
         # Zero devices found case handled within DEVICE_Search()
-        found_dev_str = ''
+        found_dev_str = ""
         if num_found == 1:
             found_dev_str += "The following device was found:"
         elif num_found > 1:
             found_dev_str += "The following devices were found:"
         for (k, v) in found_devices.items():
-            found_dev_str += f'\r\n{str(k)}: {str(v)}'
+            found_dev_str += f"\r\n{str(k)}: {str(v)}"
 
         if verbose:
             print(f"Device search completed.\n{found_dev_str}\n")
@@ -2017,10 +2122,10 @@ class RSA:
             self.DEVICE_Connect()
             if verbose:
                 print("Device connected.\n")
-                
-                
-    def IQSTREAM_Tempfile_NoConfig(self, duration_msec: int,
-                                   return_status: bool=False) -> np.ndarray:
+
+    def IQSTREAM_Tempfile_NoConfig(
+        self, duration_msec: int, return_status: bool = False
+    ) -> np.ndarray:
         """
         Retrieve IQ data from device by first writing to a tempfile.
         Does not perform any device configuration: only captures data.
@@ -2047,7 +2152,7 @@ class RSA:
         dest = _IQS_OUT_DEST[3]  # Split SIQ format
         dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
         suffix_ctl = -2  # No file suffix
-        filename = 'tempIQ'
+        filename = "tempIQ"
         sleep_time_sec = 0.05  # Loop sleep time checking if acquisition complete
 
         # Ensure device is stopped before proceeding
@@ -2055,7 +2160,7 @@ class RSA:
 
         # Create temp directory and collect data
         with tempfile.TemporaryDirectory() as tmp_dir:
-            filename_base = tmp_dir + '/' + filename
+            filename_base = tmp_dir + "/" + filename
 
             # Configure device
             self.IQSTREAM_SetOutputConfiguration(dest, dtype)
@@ -2082,7 +2187,7 @@ class RSA:
             self.DEVICE_Stop()
 
             # Read data back in from file
-            with open(filename_base + '.siqd', 'rb') as f:
+            with open(filename_base + ".siqd", "rb") as f:
                 d = np.frombuffer(f.read(), dtype=np.float32)
 
         # Deinterleave I and Q
@@ -2091,15 +2196,20 @@ class RSA:
         # Re-interleave as numpy complex64)
         iq_data = i + 1j * q
         assert iq_data.dtype == np.complex64
-        
+
         if return_status:
             return iq_data, iq_status
         else:
             return iq_data
 
-    def IQSTREAM_Tempfile(self, cf: Union[float, int], ref_level: Union[float, int],
-                          bw: Union[float, int], duration_msec: int,
-                          return_status: bool=False) -> np.ndarray:
+    def IQSTREAM_Tempfile(
+        self,
+        cf: Union[float, int],
+        ref_level: Union[float, int],
+        bw: Union[float, int],
+        duration_msec: int,
+        return_status: bool = False,
+    ) -> np.ndarray:
         """
         Retrieve IQ data from device by first writing to a tempfile.
         Performs device configuration before capturing.
@@ -2132,7 +2242,7 @@ class RSA:
         dest = _IQS_OUT_DEST[3]  # Split SIQ format
         dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
         suffix_ctl = -2  # No file suffix
-        filename = 'tempIQ'
+        filename = "tempIQ"
         sleep_time_sec = 0.05  # Loop sleep time checking if acquisition complete
 
         # Ensure device is stopped before proceeding
@@ -2140,7 +2250,7 @@ class RSA:
 
         # Create temp directory and configure/collect data
         with tempfile.TemporaryDirectory() as tmp_dir:
-            filename_base = tmp_dir + '/' + filename
+            filename_base = tmp_dir + "/" + filename
 
             # Configure device
             self.CONFIG_SetCenterFreq(cf)
@@ -2170,7 +2280,7 @@ class RSA:
             self.DEVICE_Stop()
 
             # Read data back in from file
-            with open(filename_base + '.siqd', 'rb') as f:
+            with open(filename_base + ".siqd", "rb") as f:
                 d = np.frombuffer(f.read(), dtype=np.float32)
 
         # Deinterleave I and Q
@@ -2179,14 +2289,14 @@ class RSA:
         # Re-interleave as numpy complex64)
         iq_data = i + 1j * q
         assert iq_data.dtype == np.complex64
-        
+
         if return_status:
             return iq_data, iq_status
         else:
             return iq_data
 
     @staticmethod
-    def IQSTREAM_StatusParser(iq_stream_info: _IQStreamFileInfo, exit: bool=True):
+    def IQSTREAM_StatusParser(iq_stream_info: _IQStreamFileInfo, exit: bool = True):
         """
         Parse _IQStreamFileInfo structure.
 
@@ -2235,24 +2345,24 @@ class RSA:
             if exit:
                 return
             else:
-                return 'No error.'
+                return "No error."
         else:
             # Construct status string if status != 0
-            status_str = ''
+            status_str = ""
             if bool(status & 0x10000):  # mask bit 16
-                status_str += 'Input overrange\n.'
-            if bool(status & 0x20000): # mask bit 17
-                status_str += 'USB data stream discontinuity.\n'
+                status_str += "Input overrange\n."
+            if bool(status & 0x20000):  # mask bit 17
+                status_str += "USB data stream discontinuity.\n"
             if bool(status & 0x40000):  # mask bit 18
-                status_str += 'Input buffer > 75{} full.\n'.format('%')
+                status_str += "Input buffer > 75{} full.\n".format("%")
             if bool(status & 0x80000):  # mask bit 19
-                status_str += 'Input buffer overflow. IQStream processing too'
-                status_str += ' slow, data loss has occurred.\n'
+                status_str += "Input buffer overflow. IQStream processing too"
+                status_str += " slow, data loss has occurred.\n"
             if bool(status & 0x100000):  # mask bit 20
-                status_str += 'Output buffer > 75{} full.\n'.format('%')
+                status_str += "Output buffer > 75{} full.\n".format("%")
             if bool(status & 0x200000):  # mask bit 21
-                status_str += 'Output buffer overflow. File writing too slow, '
-                status_str += 'data loss has occurred.\n'
+                status_str += "Output buffer overflow. File writing too slow, "
+                status_str += "data loss has occurred.\n"
             if exit:
                 # Raise error with full string if configured
                 raise RSAError(status_str)
@@ -2260,8 +2370,9 @@ class RSA:
                 # Or just return the status string
                 return status_str
 
-    def SPECTRUM_Acquire(self, trace: str = 'Trace1', trace_points: int = 801,
-                         timeout_msec: int = 50) -> Tuple[np.ndarray, int]:
+    def SPECTRUM_Acquire(
+        self, trace: str = "Trace1", trace_points: int = 801, timeout_msec: int = 50
+    ) -> Tuple[np.ndarray, int]:
         """
         Acquire spectrum trace.
 
@@ -2291,8 +2402,13 @@ class RSA:
             sleep(int(timeout_msec * 1e-3))
         return self.SPECTRUM_GetTrace(trace, trace_points)
 
-    def IQBLK_Configure(self, cf: Union[float, int] = 1e9, ref_level: Union[float, int] = 0,
-                        iq_bw: Union[float, int] = 40e6, record_length: int = 1024) -> None:
+    def IQBLK_Configure(
+        self,
+        cf: Union[float, int] = 1e9,
+        ref_level: Union[float, int] = 0,
+        iq_bw: Union[float, int] = 40e6,
+        record_length: int = 1024,
+    ) -> None:
         """
         Configure device for IQ block collection.
 
@@ -2312,7 +2428,9 @@ class RSA:
         self.IQBLK_SetIQBandwidth(iq_bw)
         self.IQBLK_SetIQRecordLength(record_length)
 
-    def IQBLK_Acquire(self, rec_len: int = 1024, timeout_ms: int = 50) -> Tuple[np.ndarray, np.ndarray]:
+    def IQBLK_Acquire(
+        self, rec_len: int = 1024, timeout_ms: int = 50
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Acquire IQBLK data using IQBLK_GetIQDataDeinterleaved.
 
@@ -2338,8 +2456,7 @@ class RSA:
             sleep(int(timeout_ms * 1e-3))
         return self.IQBLK_GetIQDataDeinterleaved(req_length=rec_len)
 
-
-    def DEVICE_GetTemperature(self, unit: str = 'celsius') -> float:
+    def DEVICE_GetTemperature(self, unit: str = "celsius") -> float:
         """
         Get the device temperature.
 
@@ -2356,7 +2473,7 @@ class RSA:
         # Store previous frequency reference setting
         old_fru = (c_char * _FREQ_REF_USER_SETTING_STRLEN)()
         self.err_check(self.rsa.CONFIG_GetFreqRefUserSetting(byref(old_fru)))
-        old_fru = old_fru.value.decode('utf-8')
+        old_fru = old_fru.value.decode("utf-8")
 
         # Update frequency reference setting to update temperature value
         self.CONFIG_SetFreqRefUserSetting(None)
@@ -2365,18 +2482,18 @@ class RSA:
         fru = self.CONFIG_GetFreqRefUserSetting()
 
         # Restore previous frequency reference setting
-        if old_fru != 'Invalid User Setting':
+        if old_fru != "Invalid User Setting":
             self.CONFIG_SetFreqRefUserSetting(old_fru)
 
         # Read back in value
-        temp_c = self.CONFIG_DecodeFreqRefUserSettingString(fru)['temperature']
+        temp_c = self.CONFIG_DecodeFreqRefUserSettingString(fru)["temperature"]
 
         # Handle unit conversion if needed
-        if unit.lower() in ['c', 'celsius']:
+        if unit.lower() in ["c", "celsius"]:
             temp = temp_c
-        elif unit.lower() in ['f', 'fahrenheit']:
-            temp = (temp_c * 9. / 5.) + 32
-        elif unit.lower() in ['k', 'kelvin', 'kelvins']:
+        elif unit.lower() in ["f", "fahrenheit"]:
+            temp = (temp_c * 9.0 / 5.0) + 32
+        elif unit.lower() in ["k", "kelvin", "kelvins"]:
             temp = temp_c + 273.15
         else:
             raise RSAError("Invalid temperature unit selection.")
