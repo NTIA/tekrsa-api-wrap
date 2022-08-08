@@ -49,7 +49,7 @@ below for an example of how to do this.
 Next download and install this API wrapper using `pip`:
 
 ```bash
-pip install tekrsa_api_wrap
+pip install tekrsa-api-wrap
 ```
 
 ## Usage
