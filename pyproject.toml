@@ -1,23 +1,25 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["flit_core>=3.4,<4"]
+build-backend = "flit_core.buildapi"
 
 [project]
-name = "tekrsa_api_wrap"
-dynamic = ["version"]
-description = "NTIA/ITS Python wrapper for the Tektronix RSA API for Linux"
+name = "tekrsa-api-wrap"
+dynamic = ["version", "description"]
 readme = "README.md"
 requires-python = ">=3.8"
 license = { file = "LICENSE.md" }
 
 authors = [
     { name = "The Institute for Telecommunication Sciences" },
-    { name="Anthony Romaniello", email="aromaniello@ntia.gov"}
+]
+
+maintainers = [
+    { name="Anthony Romaniello", email="aromaniello@ntia.gov"},
 ]
 
 keywords = [
-    "api", "wrapper", "spectrum", "analyzer", "sdr", "rf",
-    "scos", "linux", "tektronix", "rsa"
+    "API", "wrapper", "spectrum", "analyzer", "SDR", "RF",
+    "SCOS", "Linux", "Tektronix", "RSA", "radio",
 ]
 
 classifiers = [
@@ -34,14 +36,13 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy>=1.22,<2.0",
+    "numpy>=1.22",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "hatchling>=1.6.0,<2.0",
-    "pre-commit>=2.20.0,<3.0",
-    "twine>=4.0.1,<5.0"
+    "flit>=3.4,<4",
+    "pre-commit>=2.20.0",
 ]
 
 [project.urls]
@@ -51,13 +52,5 @@ dev = [
 "ITS Website" = "https://its.ntia.gov"
 "Tektronix Website" = "https://www.tek.com/en"
 
-[tool.hatch.version]
-path = "src/rsa_api/__about__.py"
-
-[tool.hatch.build]
-skip-excluded-dirs = true
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/rsa_api"]
-
-[tool.hatch.build.targets.sdist]
+[tool.flit.module]
+name = "rsa_api"
