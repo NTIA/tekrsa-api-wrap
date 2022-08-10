@@ -111,6 +111,41 @@ wrapper is limited in certain ways. The list of known issues is provided by Tekt
 the [Tektronix RSA API for Linux release notes](https://download.tek.com/software/supporting_files/ReleaseNotes_1_0_0014_64bit_066207701.txt)
 (up-to-date as of version 1.0.0014):
 
+## Development
+
+### Development Environment
+
+Set up a development environment using a tool like
+[Conda](https://docs.conda.io/en/latest/)
+or [venv](https://docs.python.org/3/library/venv.html#module-venv), with `python>=3.8`.
+Then, from the cloned directory, install the development dependencies by running:
+
+```bash
+pip install .[dev]
+```
+
+This will install the project itself, along with development dependencies for pre-commit
+hooks, building distributions, and running tests. Set up pre-commit, which runs
+auto-formatting and code-checking automatically when you make a commit, by running:
+
+```bash
+pre-commit install
+```
+
+The pre-commit tool will auto-format Python code using [Black](https://github.com/psf/black)
+and [isort](https://github.com/pycqa/isort). Other pre-commit hooks are also enabled, and
+can be found in [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
+
+### Building New Releases
+
+This project uses [flit](https://github.com/pypa/flit) as a backend. To build a new
+release (both wheel and sdist/tarball), first update the version number in [`src/rsa_api/__init__.py`](src/rsa_api/__init__.py),
+then run:
+
+```bash
+flit build
+```
+
 ### Running Tests
 
 A testing file is included in the `tests` directory of this repository. The test uses
@@ -136,53 +171,6 @@ and [for the 500A/600A series devices](https://github.com/tektronix/RSA_API/blob
 In addition to adapting this code to work with this API wrapper, various tests were also
 added which were not present in the original versions, and the test was made to be
 universal for all supported RSA devices.
-
-## Development
-
-### Development Environment
-
-Set up a development environment using a tool like
-[Conda](https://docs.conda.io/en/latest/)
-or [venv](https://docs.python.org/3/library/venv.html#module-venv), with `python>=3.8`.
-Then, from the cloned directory, install the development dependencies by running:
-
-```bash
-pip install .[dev]
-```
-
-This will install the project itself, along with development dependencies `hatchling`,
-`pre-commit`, and `twine`. Set up pre-commit, which runs auto-formatting and code-checking
-automatically when you make a commit, by running:
-
-```bash
-pre-commit install
-```
-
-The pre-commit tool will auto-format Python code using [Black](https://github.com/psf/black)
-and [isort](https://github.com/pycqa/isort). Other pre-commit hooks are also enabled, and
-can be found in [.pre-commit-config.yaml](.pre-commit-config.yaml).
-
-### Building New Releases
-
-This project uses [Hatchling](https://github.com/pypa/hatch/tree/master/backend) as a
-backend. Hatchling makes version control and building new releases easy. The package
-version can be updated easily using any of the following commands.
-
-```bash
-hatchling version major  # 1.0.0 -> 2.0.0
-hatchling version minor  # 1.0.0 -> 1.1.0
-hatchling version micro  # 1.0.0 -> 1.0.1
-hatchling version "X.X.X"  # 1.0.0 -> X.X.X
-```
-
-To build a wheel distribution and source distribution, run:
-
-```bash
-hatchling build
-```
-
-When using `hatchling version`, there's no need to update package metadata with the new
-version number.
 
 ## License
 
