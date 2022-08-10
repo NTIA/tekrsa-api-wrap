@@ -33,7 +33,7 @@ instead of using this wrapper.
 
 ## Installation
 
-Requires `python>=3.8`, `numpy>=1.21`, and the Tektronix RSA API for Linux.
+Requires `python>=3.8`, `numpy>=1.22`, and the Tektronix RSA API for Linux.
 
 First, download and install the
 [RSA API for Linux](https://www.tek.com/spectrum-analyzer/rsa306-software/rsa-application-programming-interface--api-for-64bit-linux--v100014)
