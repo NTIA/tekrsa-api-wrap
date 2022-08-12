@@ -54,9 +54,6 @@ dev = [
 "ITS Website" = "https://its.ntia.gov"
 "Tektronix Website" = "https://www.tek.com/en"
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
 [tool.hatch.version]
 path = "src/rsa_api/__init__.py"
 
