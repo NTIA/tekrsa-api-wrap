@@ -1,10 +1,11 @@
 [build-system]
-requires = ["flit_core>=3.4,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "tekrsa-api-wrap"
-dynamic = ["version", "description"]
+dynamic = ["version"]
+description = "NTIA/ITS Python wrapper for the Tektronix RSA API for Linux"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { file = "LICENSE.md" }
@@ -41,8 +42,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "flit>=3.4,<4",
+    "hatchling>=1.6.0,<2.0",
     "pre-commit>=2.20.0",
+    "twine>=4.0.1,<5.0",
 ]
 
 [project.urls]
@@ -52,5 +54,8 @@ dev = [
 "ITS Website" = "https://its.ntia.gov"
 "Tektronix Website" = "https://www.tek.com/en"
 
-[tool.flit.module]
-name = "rsa_api"
+[tool.hatch.version]
+path = "src/rsa_api/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rsa_api"]
