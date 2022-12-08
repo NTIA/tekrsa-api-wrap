@@ -1409,7 +1409,8 @@ class RSA:
             Length of the IQ block retrieved, in samples.
         _IQStreamIQInfo
             IQ Stream info structure, containing the acquisition
-            status.
+            status. Note that the timestamp field of this structure
+            seems to give wildly incorrect results.
 
         Raises
         ------
