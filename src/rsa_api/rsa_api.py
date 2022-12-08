@@ -1111,17 +1111,15 @@ class RSA:
         """
         req_length = RSA.check_int(req_length)
         req_length = RSA.check_range(req_length, 2, self.IQBLK_GetIQRecordLength())
-        i_data = np.array(req_length, dtype=np.float32)
-        q_data = np.array(req_length, dtype=np.float32)
-        c_i_data, c_q_data = (np.ctypeslib.as_ctypes(a) for a in [i_data, q_data])
+        i_data = (c_float * req_length)()
+        q_data = (c_float * req_length)()
         out_length = c_int()
         self.err_check(
             self.rsa.IQBLK_GetIQDataDeinterleaved(
-                byref(c_i_data), byref(c_q_data), byref(out_length), c_int(req_length)
+                byref(i_data), byref(q_data), byref(out_length), c_int(req_length)
             )
         )
-        del c_i_data, c_q_data
-        return i_data, q_data
+        return np.ctypeslib.as_array(i_data), np.ctypeslib.as_array(q_data)
 
     def IQBLK_GetIQRecordLength(self) -> int:
         """
