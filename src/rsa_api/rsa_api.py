@@ -1232,9 +1232,10 @@ class RSA:
             the data is not ready and the timeout value is exceeded.
         """
         timeout_msec = RSA.check_int(timeout_msec)
-        timeout_msec = c_int(timeout_msec)
         ready = c_bool()
-        self.err_check(self.rsa.IQBLK_WaitForIQDataReady(timeout_msec, byref(ready)))
+        self.err_check(
+            self.rsa.IQBLK_WaitForIQDataReady(c_int(timeout_msec), byref(ready))
+        )
         return ready.value
 
     # IQ STREAM METHODS
