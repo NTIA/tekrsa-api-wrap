@@ -7,7 +7,7 @@ import tempfile
 from ctypes import *
 from enum import Enum
 from os.path import abspath, join
-from time import perf_counter, sleep
+from time import sleep
 from typing import Any, Tuple, Union
 
 import numpy as np
@@ -23,7 +23,7 @@ _HW_VERSION_STRLEN = 4  # Bytes allocated for HW version number string
 _NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
 _API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
 _FREQ_REF_USER_SETTING_STRLEN = (
-    54  # Characters in frequency reference user setting string
+    200  # Max. characters in frequency reference user setting string
 )
 _DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
 _IQSTREAM_MAX_TRIGGERCOUNT = (
