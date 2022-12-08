@@ -1,6 +1,9 @@
 # Folder generated when running tests with RSA500/600
 Tektronix
 
+# Testing scripts (not unit tests)
+iqstream_buffer_testing.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
