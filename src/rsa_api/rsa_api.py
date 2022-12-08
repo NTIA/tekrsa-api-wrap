@@ -440,7 +440,6 @@ class RSA:
         RSAError
             If there is no external reference input in use.
         """
-        global _FREQ_REF_SOURCE
         src = self.CONFIG_GetFrequencyReferenceSource()
         if src == _FREQ_REF_SOURCE[0]:
             raise RSAError("External frequency reference not in use.")
@@ -462,7 +461,6 @@ class RSA:
                 GNSS : Internal GNSS receiver reference
                 USER : Previously set USER setting, or, if none, INTERNAL.
         """
-        global _FREQ_REF_SOURCE
         src = c_int()
         self.err_check(self.rsa.CONFIG_GetFrequencyReferenceSource(byref(src)))
         return _FREQ_REF_SOURCE[src.value]
@@ -575,7 +573,6 @@ class RSA:
         RSAError
             If the input string does not match one of the valid settings.
         """
-        global _FREQ_REF_SOURCE
         src = RSA.check_string(src)
         if src in _FREQ_REF_SOURCE:
             if src == "GNSS" and self.DEVICE_GetNomenclature() in ["RSA306", "RSA306B"]:
@@ -779,7 +776,6 @@ class RSA:
         string
             The FPGA version number.
         """
-        global _FPGA_VERSION_STRLEN
         fpga_version = (c_char * _FPGA_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFPGAVersion(byref(fpga_version)))
         return fpga_version.value.decode("utf-8")
@@ -793,7 +789,6 @@ class RSA:
         string
             The firmware version number.
         """
-        global _FW_VERSION_STRLEN
         fw_version = (c_char * _FW_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFWVersion(byref(fw_version)))
         return fw_version.value.decode("utf-8")
@@ -807,7 +802,6 @@ class RSA:
         string
             The hardware version number.
         """
-        global _HW_VERSION_STRLEN
         hw_version = (c_char * _HW_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetHWVersion(byref(hw_version)))
         return hw_version.value.decode("utf-8")
@@ -821,7 +815,6 @@ class RSA:
         string
             Name of the device.
         """
-        global _NOMENCLATURE_STRLEN
         nomenclature = (c_char * _NOMENCLATURE_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetNomenclature(byref(nomenclature)))
         return nomenclature.value.decode("utf-8")
@@ -835,7 +828,6 @@ class RSA:
         string
             Serial number of the device.
         """
-        global _MAX_SERIAL_STRLEN
         serial_num = (c_char * _MAX_SERIAL_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetSerialNumber(byref(serial_num)))
         return serial_num.value.decode("utf-8")
@@ -849,7 +841,6 @@ class RSA:
         string
             The API version number.
         """
-        global _API_VERSION_STRLEN
         api_version = (c_char * _API_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetAPIVersion(byref(api_version)))
         return api_version.value.decode("utf-8")
@@ -947,7 +938,6 @@ class RSA:
         RSAError
             If no devices are found.
         """
-        global _MAX_NUM_DEVICES, _MAX_SERIAL_STRLEN, _MAX_DEVTYPE_STRLEN
         num_found = c_int()
         dev_ids = (c_int * _MAX_NUM_DEVICES)()
         dev_serial = ((c_char * _MAX_NUM_DEVICES) * _MAX_SERIAL_STRLEN)()
@@ -1007,7 +997,6 @@ class RSA:
         RSAError
             If the input string does not match one of the valid settings.
         """
-        global _DEV_EVENT
         occurred = c_bool()
         timestamp = c_uint64()
         event_id = RSA.check_string(event_id)
@@ -1561,7 +1550,6 @@ class RSA:
             If inputs are not valid settings, or if single data type is
             selected along with TIQ file format.
         """
-        global _IQS_OUT_DEST, _IQS_OUT_DTYPE
         dest = RSA.check_string(dest)
         dtype = RSA.check_string(dtype)
         if dest in _IQS_OUT_DEST and dtype in _IQS_OUT_DTYPE:
@@ -1709,7 +1697,6 @@ class RSA:
         actualNumIQSamples : int
             Actual number of IQ samples used for transform.
         """
-        global _SPECTRUM_WINDOWS, _SPECTRUM_VERTICAL_UNITS
         sets = _SpectrumSettings()
         self.err_check(self.rsa.SPECTRUM_GetSettings(byref(sets)))
         settings_dict = {
@@ -1756,7 +1743,6 @@ class RSA:
         RSAError
             If the trace input does not match one of the valid strings.
         """
-        global _SPECTRUM_TRACES
         trace = RSA.check_string(trace)
         max_trace_points = RSA.check_int(max_trace_points)
         if trace in _SPECTRUM_TRACES:
@@ -1818,7 +1804,6 @@ class RSA:
         RSAError
             If the trace input does not match a valid setting.
         """
-        global _SPECTRUM_TRACES, _SPECTRUM_DETECTORS
         trace = RSA.check_string(trace)
         if trace in _SPECTRUM_TRACES:
             trace_val = c_int(_SPECTRUM_TRACES.index(trace))
@@ -1886,7 +1871,6 @@ class RSA:
             If window or verticalUnit string inputs are not one of the
             allowed settings.
         """
-        global _SPECTRUM_WINDOWS, _SPECTRUM_VERTICAL_UNITS
         win = RSA.check_string(win)
         vert_unit = RSA.check_string(vert_unit)
         if win in _SPECTRUM_WINDOWS and vert_unit in _SPECTRUM_VERTICAL_UNITS:
@@ -1924,7 +1908,6 @@ class RSA:
         RSAError
             If the trace or detector type input is not one of the valid settings.
         """
-        global _SPECTRUM_TRACES, _SPECTRUM_DETECTORS
         trace = RSA.check_string(trace)
         detector = RSA.check_string(detector)
         if trace in _SPECTRUM_TRACES and detector in _SPECTRUM_DETECTORS:
@@ -1986,7 +1969,6 @@ class RSA:
         string
             Either "freeRun" or "triggered".
         """
-        global _TRIGGER_MODE
         mode = c_int()
         self.err_check(self.rsa.TRIG_GetTriggerMode(byref(mode)))
         return _TRIGGER_MODE[mode.value]
@@ -2015,7 +1997,6 @@ class RSA:
                 External : External source.
                 IFPowerLevel : IF power level source.
         """
-        global _TRIGGER_SOURCE
         source = c_int()
         self.err_check(self.rsa.TRIG_GetTriggerSource(byref(source)))
         return _TRIGGER_SOURCE[source.value]
@@ -2031,7 +2012,6 @@ class RSA:
             HL : Trigger on high-to-low input level change.
             Either : Trigger on either LH or HL transitions.
         """
-        global _TRIGGER_TRANSITION
         transition = c_int()
         self.err_check(self.rsa.TRIG_GetTriggerTransition(byref(transition)))
         return _TRIGGER_TRANSITION[transition.value]
@@ -2065,7 +2045,6 @@ class RSA:
         RSAError
             If the input string is not one of the valid settings.
         """
-        global _TRIGGER_MODE
         mode = RSA.check_string(mode)
         if mode.lower() in _TRIGGER_MODE:
             mode_value = _TRIGGER_MODE.index(mode.lower())
@@ -2106,7 +2085,6 @@ class RSA:
         RSAError
             If the input string does not match one of the valid settings.
         """
-        global _TRIGGER_SOURCE
         source = RSA.check_string(source)
         if source in _TRIGGER_SOURCE:
             source_value = _TRIGGER_SOURCE.index(source)
@@ -2131,7 +2109,6 @@ class RSA:
         RSAError
             If the input string does not match one of the valid settings.
         """
-        global _TRIGGER_TRANSITION
         transition = RSA.check_string(transition)
         if transition in _TRIGGER_TRANSITION:
             trans_value = _TRIGGER_TRANSITION.index(transition)
@@ -2214,7 +2191,6 @@ class RSA:
             the documentation for IQSTREAM_StatusParser().
         """
         # Configuration parameters
-        global _IQS_OUT_DEST, _IQS_OUT_DTYPE
         dest = _IQS_OUT_DEST[3]  # Split SIQ format
         dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
         suffix_ctl = -2  # No file suffix
@@ -2304,7 +2280,6 @@ class RSA:
             the documentation for IQSTREAM_StatusParser().
         """
         # Configuration parameters
-        global _IQS_OUT_DEST, _IQS_OUT_DTYPE
         dest = _IQS_OUT_DEST[3]  # Split SIQ format
         dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
         suffix_ctl = -2  # No file suffix
