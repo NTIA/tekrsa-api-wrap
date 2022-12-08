@@ -531,8 +531,12 @@ class RSA:
         self.err_check(
             self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
         )
-        # Temperature result is always 0, so manually parse the input string
-        temperature = float(i_usstr.value.decode("utf-8")[-8:-3])
+        # Temperature result in o_fui is always 0.0 due to broke RSA API
+        # Therefore, it must be retrieved directly from i_usstr.
+        # Strip checksum so temperature can be parsed (checksum has variable digits)
+        i_usstr = i_usstr.value.decode("utf-8").split("*", 1)[0]
+        temperature = float(i_usstr[-5:])
+
         fui = {
             "isvalid": o_fui.isvalid,
             "dacValue": o_fui.dacValue,
@@ -1241,10 +1245,9 @@ class RSA:
             the data is not ready and the timeout value is exceeded.
         """
         timeout_msec = RSA.check_int(timeout_msec)
+        timeout_msec = c_int(timeout_msec)
         ready = c_bool()
-        self.err_check(
-            self.rsa.IQBLK_WaitForIQDataReady(c_int(timeout_msec), byref(ready))
-        )
+        self.err_check(self.rsa.IQBLK_WaitForIQDataReady(timeout_msec, byref(ready)))
         return ready.value
 
     # IQ STREAM METHODS
