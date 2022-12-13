@@ -2168,7 +2168,7 @@ class RSA:
 
     def IQSTREAM_Tempfile_NoConfig(
         self, duration_msec: int, return_status: bool = False
-    ) -> np.ndarray:
+    ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
         """
         Retrieve IQ data from device by first writing to a tempfile.
         Does not perform any device configuration: only captures data.
@@ -2251,7 +2251,7 @@ class RSA:
         bw: Union[float, int],
         duration_msec: int,
         return_status: bool = False,
-    ) -> np.ndarray:
+    ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
         """
         Retrieve IQ data from device by first writing to a tempfile.
         Performs device configuration before capturing.
@@ -2543,7 +2543,9 @@ class RSA:
 
         return temp
 
-    def IQSTREAM_Acquire(self, duration_msec: int, return_status: bool) -> np.ndarray:
+    def IQSTREAM_Acquire(
+        self, duration_msec: int, return_status: bool
+    ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
         """
         Stream IQ data to a NumPy array.
 
