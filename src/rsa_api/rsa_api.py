@@ -23,16 +23,19 @@ _HW_VERSION_STRLEN = 4  # Bytes allocated for HW version number string
 _NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
 _API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
 _FREQ_REF_USER_SETTING_STRLEN = (
-    54  # Characters in frequency reference user setting string
+    200  # Max. characters in frequency reference user setting string
 )
 _DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
-
+_IQSTREAM_MAX_TRIGGERCOUNT = (
+    100  # Max. number of trigger events that can be reported by IQSTREAM_GetIQData
+)
 # ENUMERATION TUPLES
 
 _DEV_EVENT = ("OVERRANGE", "TRIGGER", "1PPS")
 _FREQ_REF_SOURCE = ("INTERNAL", "EXTREF", "GNSS", "USER")
 _IQS_OUT_DEST = ("CLIENT", "FILE_TIQ", "FILE_SIQ", "FILE_SIQ_SPLIT")
 _IQS_OUT_DTYPE = ("SINGLE", "INT32", "INT16", "SINGLE_SCALE_INT32")
+_NUMPY_IQS_OUT_DTYPE = (np.float32, np.int32, np.int16, np.float32)
 _SPECTRUM_DETECTORS = ("PosPeak", "NegPeak", "AverageVRMS", "Sample")
 _SPECTRUM_TRACES = ("Trace1", "Trace2", "Trace3")
 _SPECTRUM_VERTICAL_UNITS = ("dBm", "Watt", "Volt", "Amp", "dBmV")
@@ -112,6 +115,16 @@ class _IQStreamFileInfo(Structure):
         ("triggerTimestamp", c_uint64),
         ("acqStatus", c_uint32),
         ("filenames", c_wchar_p),
+    ]
+
+
+class _IQStreamIQInfo(Structure):
+    _fields_ = [
+        ("timestamp", c_uint64),
+        ("triggerCount", c_int32),
+        ("triggerIndices", c_int32 * _IQSTREAM_MAX_TRIGGERCOUNT),
+        ("scaleFactor", c_double),
+        ("acqStatus", c_uint32),
     ]
 
 
@@ -427,7 +440,6 @@ class RSA:
         RSAError
             If there is no external reference input in use.
         """
-        global _FREQ_REF_SOURCE
         src = self.CONFIG_GetFrequencyReferenceSource()
         if src == _FREQ_REF_SOURCE[0]:
             raise RSAError("External frequency reference not in use.")
@@ -449,7 +461,6 @@ class RSA:
                 GNSS : Internal GNSS receiver reference
                 USER : Previously set USER setting, or, if none, INTERNAL.
         """
-        global _FREQ_REF_SOURCE
         src = c_int()
         self.err_check(self.rsa.CONFIG_GetFrequencyReferenceSource(byref(src)))
         return _FREQ_REF_SOURCE[src.value]
@@ -518,8 +529,12 @@ class RSA:
         self.err_check(
             self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
         )
-        # Temperature result is always 0, so manually parse the input string
-        temperature = float(i_usstr.value.decode("utf-8")[-8:-3])
+        # Temperature result in o_fui is always 0.0 due to broke RSA API
+        # Therefore, it must be retrieved directly from i_usstr.
+        # Strip checksum so temperature can be parsed (checksum has variable digits)
+        i_usstr = i_usstr.value.decode("utf-8").split("*", 1)[0]
+        temperature = float(i_usstr[-5:])
+
         fui = {
             "isvalid": o_fui.isvalid,
             "dacValue": o_fui.dacValue,
@@ -558,7 +573,6 @@ class RSA:
         RSAError
             If the input string does not match one of the valid settings.
         """
-        global _FREQ_REF_SOURCE
         src = RSA.check_string(src)
         if src in _FREQ_REF_SOURCE:
             if src == "GNSS" and self.DEVICE_GetNomenclature() in ["RSA306", "RSA306B"]:
@@ -762,7 +776,6 @@ class RSA:
         string
             The FPGA version number.
         """
-        global _FPGA_VERSION_STRLEN
         fpga_version = (c_char * _FPGA_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFPGAVersion(byref(fpga_version)))
         return fpga_version.value.decode("utf-8")
@@ -776,7 +789,6 @@ class RSA:
         string
             The firmware version number.
         """
-        global _FW_VERSION_STRLEN
         fw_version = (c_char * _FW_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFWVersion(byref(fw_version)))
         return fw_version.value.decode("utf-8")
@@ -790,7 +802,6 @@ class RSA:
         string
             The hardware version number.
         """
-        global _HW_VERSION_STRLEN
         hw_version = (c_char * _HW_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetHWVersion(byref(hw_version)))
         return hw_version.value.decode("utf-8")
@@ -804,7 +815,6 @@ class RSA:
         string
             Name of the device.
         """
-        global _NOMENCLATURE_STRLEN
         nomenclature = (c_char * _NOMENCLATURE_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetNomenclature(byref(nomenclature)))
         return nomenclature.value.decode("utf-8")
@@ -818,7 +828,6 @@ class RSA:
         string
             Serial number of the device.
         """
-        global _MAX_SERIAL_STRLEN
         serial_num = (c_char * _MAX_SERIAL_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetSerialNumber(byref(serial_num)))
         return serial_num.value.decode("utf-8")
@@ -832,7 +841,6 @@ class RSA:
         string
             The API version number.
         """
-        global _API_VERSION_STRLEN
         api_version = (c_char * _API_VERSION_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetAPIVersion(byref(api_version)))
         return api_version.value.decode("utf-8")
@@ -930,7 +938,6 @@ class RSA:
         RSAError
             If no devices are found.
         """
-        global _MAX_NUM_DEVICES, _MAX_SERIAL_STRLEN, _MAX_DEVTYPE_STRLEN
         num_found = c_int()
         dev_ids = (c_int * _MAX_NUM_DEVICES)()
         dev_serial = ((c_char * _MAX_NUM_DEVICES) * _MAX_SERIAL_STRLEN)()
@@ -990,7 +997,6 @@ class RSA:
         RSAError
             If the input string does not match one of the valid settings.
         """
-        global _DEV_EVENT
         occurred = c_bool()
         timestamp = c_uint64()
         event_id = RSA.check_string(event_id)
@@ -1379,6 +1385,50 @@ class RSA:
         self.err_check(self.rsa.IQSTREAM_GetEnable(byref(enabled)))
         return enabled.value
 
+    def IQSTREAM_GetIQData(
+        self, dtype: str, buffer_size: int
+    ) -> Tuple[np.ndarray, int, _IQStreamIQInfo]:
+        """
+        Retrieve interleaved IQ data generated by IQ Stream processing.
+
+        Parameters
+        ----------
+        dtype : str
+            IQSTREAM data type, must be one of: "SINGLE" "INT32"
+            "INT16" or "SINGLE_SCALE_INT32"
+        buffer_size : int
+            Configured size of the IQSTREAM buffer, as returned
+            by IQSTREAM_GetIQDataBufferSize().
+
+        Returns
+        -------
+        np.ndarray
+            Interleaved IQ data retrieved from the buffer.
+        int
+            Length of the IQ block retrieved, in samples.
+        _IQStreamIQInfo
+            IQ Stream info structure, containing the acquisition
+            status. Note that the timestamp field of this structure
+            seems to give wildly incorrect results.
+
+        Raises
+        ------
+        ValueError
+            If `dtype` is not a valid IQSTREAM data type.
+        """
+        np_dtype = _NUMPY_IQS_OUT_DTYPE[_IQS_OUT_DTYPE.index(dtype)]
+        iqdata = np.empty(2 * buffer_size, np_dtype)
+        c_iqdata = np.ctypeslib.as_ctypes(iqdata)
+        iqlen = c_int32()
+        iqinfo = _IQStreamIQInfo()
+
+        self.err_check(
+            self.rsa.IQSTREAM_GetIQData(byref(c_iqdata), byref(iqlen), byref(iqinfo))
+        )
+
+        del c_iqdata
+        return iqdata, iqlen.value, iqinfo
+
     def IQSTREAM_GetIQDataBufferSize(self) -> int:
         """
         Get the maximum number of IQ sample pairs to be returned by IQSTREAM_GetData().
@@ -1456,11 +1506,16 @@ class RSA:
         """
         Set the requested size, in sample pairs, of the returned IQ record.
 
+        The resulting buffer size is determined by the request and by the
+        configured IQ Bandwidth. Set the bandwidth before requesting a buffer
+        size, then query the buffer size to get the resulting set value.
+
         Parameters
         ----------
         req_size : int
             Requested size of IQ output data buffer in IQ sample pairs.
-            0 resets to default.
+            0 resets to default. 1 sets to minimum size, and 1,000,000
+            sets to the maximum size.
         """
         req_size = RSA.check_int(req_size)
         self.err_check(self.rsa.IQSTREAM_SetIQDataBufferSize(c_int(req_size)))
@@ -1495,7 +1550,6 @@ class RSA:
             If inputs are not valid settings, or if single data type is
             selected along with TIQ file format.
         """
-        global _IQS_OUT_DEST, _IQS_OUT_DTYPE
         dest = RSA.check_string(dest)
         dtype = RSA.check_string(dtype)
         if dest in _IQS_OUT_DEST and dtype in _IQS_OUT_DTYPE:
@@ -1643,7 +1697,6 @@ class RSA:
         actualNumIQSamples : int
             Actual number of IQ samples used for transform.
         """
-        global _SPECTRUM_WINDOWS, _SPECTRUM_VERTICAL_UNITS
         sets = _SpectrumSettings()
         self.err_check(self.rsa.SPECTRUM_GetSettings(byref(sets)))
         settings_dict = {
@@ -1690,7 +1743,6 @@ class RSA:
         RSAError
             If the trace input does not match one of the valid strings.
         """
-        global _SPECTRUM_TRACES
         trace = RSA.check_string(trace)
         max_trace_points = RSA.check_int(max_trace_points)
         if trace in _SPECTRUM_TRACES:
@@ -1752,7 +1804,6 @@ class RSA:
         RSAError
             If the trace input does not match a valid setting.
         """
-        global _SPECTRUM_TRACES, _SPECTRUM_DETECTORS
         trace = RSA.check_string(trace)
         if trace in _SPECTRUM_TRACES:
             trace_val = c_int(_SPECTRUM_TRACES.index(trace))
@@ -1820,7 +1871,6 @@ class RSA:
             If window or verticalUnit string inputs are not one of the
             allowed settings.
         """
-        global _SPECTRUM_WINDOWS, _SPECTRUM_VERTICAL_UNITS
         win = RSA.check_string(win)
         vert_unit = RSA.check_string(vert_unit)
         if win in _SPECTRUM_WINDOWS and vert_unit in _SPECTRUM_VERTICAL_UNITS:
@@ -1858,7 +1908,6 @@ class RSA:
         RSAError
             If the trace or detector type input is not one of the valid settings.
         """
-        global _SPECTRUM_TRACES, _SPECTRUM_DETECTORS
         trace = RSA.check_string(trace)
         detector = RSA.check_string(detector)
         if trace in _SPECTRUM_TRACES and detector in _SPECTRUM_DETECTORS:
@@ -1920,7 +1969,6 @@ class RSA:
         string
             Either "freeRun" or "triggered".
         """
-        global _TRIGGER_MODE
         mode = c_int()
         self.err_check(self.rsa.TRIG_GetTriggerMode(byref(mode)))
         return _TRIGGER_MODE[mode.value]
@@ -1949,7 +1997,6 @@ class RSA:
                 External : External source.
                 IFPowerLevel : IF power level source.
         """
-        global _TRIGGER_SOURCE
         source = c_int()
         self.err_check(self.rsa.TRIG_GetTriggerSource(byref(source)))
         return _TRIGGER_SOURCE[source.value]
@@ -1965,7 +2012,6 @@ class RSA:
             HL : Trigger on high-to-low input level change.
             Either : Trigger on either LH or HL transitions.
         """
-        global _TRIGGER_TRANSITION
         transition = c_int()
         self.err_check(self.rsa.TRIG_GetTriggerTransition(byref(transition)))
         return _TRIGGER_TRANSITION[transition.value]
@@ -1999,7 +2045,6 @@ class RSA:
         RSAError
             If the input string is not one of the valid settings.
         """
-        global _TRIGGER_MODE
         mode = RSA.check_string(mode)
         if mode.lower() in _TRIGGER_MODE:
             mode_value = _TRIGGER_MODE.index(mode.lower())
@@ -2040,7 +2085,6 @@ class RSA:
         RSAError
             If the input string does not match one of the valid settings.
         """
-        global _TRIGGER_SOURCE
         source = RSA.check_string(source)
         if source in _TRIGGER_SOURCE:
             source_value = _TRIGGER_SOURCE.index(source)
@@ -2065,7 +2109,6 @@ class RSA:
         RSAError
             If the input string does not match one of the valid settings.
         """
-        global _TRIGGER_TRANSITION
         transition = RSA.check_string(transition)
         if transition in _TRIGGER_TRANSITION:
             trans_value = _TRIGGER_TRANSITION.index(transition)
@@ -2125,7 +2168,7 @@ class RSA:
 
     def IQSTREAM_Tempfile_NoConfig(
         self, duration_msec: int, return_status: bool = False
-    ) -> np.ndarray:
+    ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
         """
         Retrieve IQ data from device by first writing to a tempfile.
         Does not perform any device configuration: only captures data.
@@ -2135,7 +2178,7 @@ class RSA:
         duration_msec : int
             Duration of time to record IQ data, in milliseconds.
         return_status : bool
-            Whether or not to return the IQ capture status integer.
+            Whether or not to return the IQ capture status message.
             If False, errors will be raised for buffer overflow and
             input overrange events.
 
@@ -2148,7 +2191,6 @@ class RSA:
             the documentation for IQSTREAM_StatusParser().
         """
         # Configuration parameters
-        global _IQS_OUT_DEST, _IQS_OUT_DTYPE
         dest = _IQS_OUT_DEST[3]  # Split SIQ format
         dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
         suffix_ctl = -2  # No file suffix
@@ -2209,7 +2251,7 @@ class RSA:
         bw: Union[float, int],
         duration_msec: int,
         return_status: bool = False,
-    ) -> np.ndarray:
+    ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
         """
         Retrieve IQ data from device by first writing to a tempfile.
         Performs device configuration before capturing.
@@ -2238,7 +2280,6 @@ class RSA:
             the documentation for IQSTREAM_StatusParser().
         """
         # Configuration parameters
-        global _IQS_OUT_DEST, _IQS_OUT_DTYPE
         dest = _IQS_OUT_DEST[3]  # Split SIQ format
         dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
         suffix_ctl = -2  # No file suffix
@@ -2296,9 +2337,11 @@ class RSA:
             return iq_data
 
     @staticmethod
-    def IQSTREAM_StatusParser(iq_stream_info: _IQStreamFileInfo, exit: bool = True):
+    def IQSTREAM_StatusParser(
+        iq_stream_info: Union[_IQStreamFileInfo, _IQStreamIQInfo], exit: bool = True
+    ):
         """
-        Parse _IQStreamFileInfo structure.
+        Parse _IQStreamFileInfo or _IQStreamIQInfo to get acquisition status.
 
         Depending on the 'exit' parameter, this method will either raise an
         error, or return a status string. Possible values for the
@@ -2499,3 +2542,83 @@ class RSA:
             raise RSAError("Invalid temperature unit selection.")
 
         return temp
+
+    def IQSTREAM_Acquire(
+        self, duration_msec: int, return_status: bool
+    ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
+        """
+        Stream IQ data to a NumPy array.
+
+        Parameters
+        ----------
+        duration_msec : int
+            Duration of time to record IQ data, in milliseconds.
+        return_status : bool
+            Whether or not to return the IQ capture status message.
+            If False, errors will be raised for buffer overflow and
+            input overrange events.
+
+        Returns
+        -------
+        iq_data : np.ndarray of np.complex64 values
+            IQ data, with each element in the form (I + j*Q)
+        iq_status : str (optional)
+            The status string for the IQ capture, as defined in
+            the documentation for IQSTREAM_StatusParser().
+        """
+        dest = _IQS_OUT_DEST[0]  # Client
+        dtype = _IQS_OUT_DTYPE[0]  # Single
+        buffer_size = 1000000  # Maximum
+
+        # Ensure device is stopped before proceeding
+        self.DEVICE_Stop()
+
+        # Configure IQ Streaming
+        self.IQSTREAM_SetOutputConfiguration(dest, dtype)
+        self.IQSTREAM_SetIQDataBufferSize(buffer_size)
+        buffer_size = self.IQSTREAM_GetIQDataBufferSize()
+        sample_rate_Hz = self.IQSTREAM_GetAcqParameters()[1]
+        iq_samples_requested = int(duration_msec * 1e-3 * sample_rate_Hz)
+        buffer_time_msec = round(buffer_size / sample_rate_Hz * 1e3) * 2
+
+        self.IQSTREAM_ClearAcqStatus()
+        self.DEVICE_PrepareForRun()
+
+        # Initialize data array
+        iqdata = np.empty(iq_samples_requested, dtype=np.complex64)
+        iq_samples_received = 0
+
+        self.DEVICE_Run()
+        self.IQSTREAM_Start()
+
+        while iq_samples_received < iq_samples_requested:
+            # Block while RSA buffer fills
+            while not self.IQSTREAM_WaitForIQDataReady(buffer_time_msec):
+                pass
+            # Then retrieve IQ data (interleaved)
+            iq_block, iq_block_len, iqinfo = self.IQSTREAM_GetIQData(dtype, buffer_size)
+
+            # Deinterleave and store data
+            if iq_samples_received + iq_block_len <= iq_samples_requested:
+                iqdata[iq_samples_received : iq_samples_received + iq_block_len] = (
+                    iq_block[0 : iq_block_len * 2 : 2]
+                    + 1j * iq_block[1 : iq_block_len * 2 : 2]
+                )
+            else:
+                remaining_samples = iq_samples_requested - iq_samples_received
+                iqdata[iq_samples_received:iq_samples_requested] = (
+                    iq_block[0 : remaining_samples * 2 : 2]
+                    + 1j * iq_block[1 : remaining_samples * 2 : 2]
+                )
+            iq_samples_received += iq_block_len
+
+        self.IQSTREAM_Stop()
+        self.DEVICE_Stop()
+
+        assert len(iqdata) == iq_samples_requested
+
+        if return_status:
+            iq_status = self.IQSTREAM_StatusParser(iqinfo, not return_status)
+            return iqdata, iq_status
+        else:
+            return iqdata

@@ -71,8 +71,8 @@ print(f"Current Center Frequency (Hz): {rsa.CONFIG_GetCenterFreq()}")
 rsa.DEVICE_Disconnect()
 
 # Print docstrings for any implemented API function
-help(rsa.IQSTREAM_Tempfile) # Requires initialized RSA device
-help(rsa_api.RSA.IQSTREAM_Tempfile)  # Does not require initalized RSA device
+help(rsa.IQSTREAM_Acquire) # Requires initialized RSA device
+help(rsa_api.RSA.IQSTREAM_Acquire)  # Does not require initalized RSA device
 ```
 
 ### List of API functions NOT implemented
@@ -85,14 +85,13 @@ help(rsa_api.RSA.IQSTREAM_Tempfile)  # Does not require initalized RSA device
   - `DEVICE_GetNomenclature()` and `IQSTREAM_SetDiskFilenameBase()` are used instead.
 - `IQBLK_GetIQDataCplx()`
   - `IQBLK_GetIQData()` and `IQBLK_GetIQDataDeinterleaved()` are used instead.
-- `IQSTREAM_GetIQData()`
-  - `IQSTREAM_Tempfile()` is used instead.
 
 ### List of API "Helper" functions
 
 A handful of useful functions are included in this wrapper which streamline some common
 tasks. These "helper functions" include:
 
+- `IQSTREAM_Acquire()`
 - `IQBLK_Acquire()`
 - `IQBLK_Configure()`
 - `SPECTRUM_Acquire()`
