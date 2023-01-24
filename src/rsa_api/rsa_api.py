@@ -26,9 +26,7 @@ _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
 _DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
-_IQSTREAM_MAX_TRIGGERCOUNT = (
-    100  # Max. number of trigger events that can be reported by IQSTREAM_GetIQData
-)
+
 # ENUMERATION TUPLES
 
 _DEV_EVENT = ("OVERRANGE", "TRIGGER", "1PPS")
@@ -121,8 +119,8 @@ class _IQStreamFileInfo(Structure):
 class _IQStreamIQInfo(Structure):
     _fields_ = [
         ("timestamp", c_uint64),
-        ("triggerCount", c_int32),
-        ("triggerIndices", c_int32 * _IQSTREAM_MAX_TRIGGERCOUNT),
+        ("triggerCount", c_int),
+        ("triggerIndices", POINTER(c_int)),
         ("scaleFactor", c_double),
         ("acqStatus", c_uint32),
     ]
@@ -2392,10 +2390,18 @@ class RSA:
         else:
             # Construct status string if status != 0
             status_str = ""
+            # Note: the API programming manual gives one specification
+            # for the structuring of status bits, and the RSA_API Python
+            # example code from Tektronix gives another. The latter appears
+            # to work, however it lacks the ability to detect the "USB data
+            # stream discontinuity" status. Attempting to implement it as
+            # described in the programming manual does not work. The only
+            # testable status is ADC overrange: and this is shown to work
+            # for both IQSTREAM_Tempfile and IQSTREAM_Acquire helper methods.
             if bool(status & 0x10000):  # mask bit 16
                 status_str += "Input overrange\n."
-            if bool(status & 0x20000):  # mask bit 17
-                status_str += "USB data stream discontinuity.\n"
+            # if bool(status & 0x20000):  # mask bit 17
+            # status_str += "USB data stream discontinuity.\n"
             if bool(status & 0x40000):  # mask bit 18
                 status_str += "Input buffer > 75{} full.\n".format("%")
             if bool(status & 0x80000):  # mask bit 19
@@ -2406,6 +2412,8 @@ class RSA:
             if bool(status & 0x200000):  # mask bit 21
                 status_str += "Output buffer overflow. File writing too slow, "
                 status_str += "data loss has occurred.\n"
+            if status_str == "":
+                status_str += "Unknown nonzero status code"
             if exit:
                 # Raise error with full string if configured
                 raise RSAError(status_str)
