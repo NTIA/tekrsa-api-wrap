@@ -2399,7 +2399,7 @@ class RSA:
             # testable status is ADC overrange: and this is shown to work
             # for both IQSTREAM_Tempfile and IQSTREAM_Acquire helper methods.
             if bool(status & 0x10000):  # mask bit 16
-                status_str += "Input overrange\n."
+                status_str += "Input overrange.\n"
             # if bool(status & 0x20000):  # mask bit 17
             # status_str += "USB data stream discontinuity.\n"
             if bool(status & 0x40000):  # mask bit 18
@@ -2413,7 +2413,7 @@ class RSA:
                 status_str += "Output buffer overflow. File writing too slow, "
                 status_str += "data loss has occurred.\n"
             if status_str == "":
-                status_str += "Unknown nonzero status code"
+                status_str += "Unknown nonzero status code\n"
             if exit:
                 # Raise error with full string if configured
                 raise RSAError(status_str)
