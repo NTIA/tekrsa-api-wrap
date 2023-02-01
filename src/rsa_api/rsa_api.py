@@ -2494,7 +2494,7 @@ class RSA:
             if exit:
                 # Raise error with full string if configured
                 raise RSAError(status_str)
-        return status_str
+        return f"{status_str}, {status=} (type {type(status)})"
 
     def SPECTRUM_Acquire(
         self, trace: str = "Trace1", trace_points: int = 801, timeout_msec: int = 50
