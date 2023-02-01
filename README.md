@@ -95,7 +95,8 @@ tasks. These "helper functions" include:
 - `IQBLK_Acquire()`
 - `IQBLK_Configure()`
 - `SPECTRUM_Acquire()`
-- `IQSTREAM_StatusParser()`
+- `IQSTREAMFileInfo_StatusParser()`
+- `IQSTREAMIQInfo_StatusParser()`
 - `IQSTREAM_Tempfile()`
 - `IQSTREAM_Tempfile_NoConfig()`
 - `DEVICE_SearchAndConnect()`
@@ -109,6 +110,8 @@ Known issues exist in the underlying Tektronix RSA API for Linux, and therefore 
 wrapper is limited in certain ways. The list of known issues is provided by Tektronix in
 the [Tektronix RSA API for Linux release notes](https://download.tek.com/software/supporting_files/ReleaseNotes_1_0_0014_64bit_066207701.txt)
 (up-to-date as of version 1.0.0014).
+
+### TODO: Update this section after resolving
 
 Additionally, a known issue exists with parsing IQ streaming status data structures.
 There appears to be a discrepancy between the documented status message encoding scheme
