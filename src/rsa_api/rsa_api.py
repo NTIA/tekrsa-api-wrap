@@ -2406,23 +2406,7 @@ class RSA:
             if bool(status & 0x200000):  # mask bit 21
                 status_str += "Output buffer overflow. File writing too slow, "
                 status_str += "data loss has occurred.\n"
-            if any(
-                [
-                    bool(status & bm)
-                    for bm in [
-                        0x400000,
-                        0x800000,
-                        0x1000000,
-                        0x2000000,
-                        0x4000000,
-                        0x8000000,
-                        0x10000000,
-                        0x20000000,
-                        0x40000000,
-                        0x80000000,
-                    ]
-                ]
-            ):
+            if bool(status & 0xFFC00000):
                 status_str += (
                     "Invalid status code returned. Some always-zero bits are nonzero."
                 )
@@ -2503,23 +2487,7 @@ class RSA:
             if bool(status & 0x200000):  # mask bit 21
                 status_str += "Output buffer overflow. File writing too slow, "
                 status_str += "data loss has occurred.\n"
-            if any(
-                [
-                    bool(status & bm)
-                    for bm in [
-                        0x400000,
-                        0x800000,
-                        0x1000000,
-                        0x2000000,
-                        0x4000000,
-                        0x8000000,
-                        0x10000000,
-                        0x20000000,
-                        0x40000000,
-                        0x80000000,
-                    ]
-                ]
-            ):
+            if bool(status & 0xFFC00000):
                 status_str += (
                     "Invalid status code returned. Some always-zero bits are nonzero."
                 )
