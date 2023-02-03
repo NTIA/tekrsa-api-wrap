@@ -2443,7 +2443,7 @@ class RSA:
 
         Parameters
         ----------
-        iq_stream_info : _IQStreamFileInfo
+        iq_stream_info : _IQStreamIQInfo
             The IQ streaming status information structure.
         exit : bool
             If True, raise an exception for any error or warning status in the
