@@ -26,9 +26,7 @@ _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
 _DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
-_IQSTREAM_MAX_TRIGGERCOUNT = (
-    100  # Max. number of trigger events that can be reported by IQSTREAM_GetIQData
-)
+
 # ENUMERATION TUPLES
 
 _DEV_EVENT = ("OVERRANGE", "TRIGGER", "1PPS")
@@ -121,8 +119,8 @@ class _IQStreamFileInfo(Structure):
 class _IQStreamIQInfo(Structure):
     _fields_ = [
         ("timestamp", c_uint64),
-        ("triggerCount", c_int32),
-        ("triggerIndices", c_int32 * _IQSTREAM_MAX_TRIGGERCOUNT),
+        ("triggerCount", c_int),
+        ("triggerIndices", POINTER(c_int)),
         ("scaleFactor", c_double),
         ("acqStatus", c_uint32),
     ]
@@ -135,7 +133,7 @@ class RSAError(Exception):
     def __init__(self, err_txt=""):
         self.err_txt = err_txt
         err = "RSA Error: {}".format(self.err_txt)
-        super(RSAError, self).__init__(err)
+        super().__init__(err)
 
 
 class RSA:
@@ -2188,7 +2186,7 @@ class RSA:
             IQ data, with each element in the form (I + j*Q)
         iq_status : str (optional)
             The status string for the IQ capture, as defined in
-            the documentation for IQSTREAM_StatusParser().
+            the documentation for IQSTREAMFileInfo_StatusParser().
         """
         # Configuration parameters
         dest = _IQS_OUT_DEST[3]  # Split SIQ format
@@ -2224,7 +2222,7 @@ class RSA:
 
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
-            iq_status = self.IQSTREAM_StatusParser(file_info, not return_status)
+            iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
 
             self.DEVICE_Stop()
 
@@ -2277,7 +2275,7 @@ class RSA:
             IQ data, with each element in the form (I + j*Q)
         iq_status : str (optional)
             The status code for the IQ capture, as defined in
-            the documentation for IQSTREAM_StatusParser().
+            the documentation for IQSTREAMFileInfo_StatusParser().
         """
         # Configuration parameters
         dest = _IQS_OUT_DEST[3]  # Split SIQ format
@@ -2316,7 +2314,7 @@ class RSA:
 
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
-            iq_status = self.IQSTREAM_StatusParser(file_info, not return_status)
+            iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
 
             self.DEVICE_Stop()
 
@@ -2337,27 +2335,26 @@ class RSA:
             return iq_data
 
     @staticmethod
-    def IQSTREAM_StatusParser(
-        iq_stream_info: Union[_IQStreamFileInfo, _IQStreamIQInfo], exit: bool = True
-    ):
+    def IQSTREAMFileInfo_StatusParser(
+        iq_stream_info: _IQStreamFileInfo, exit: bool = True
+    ) -> Union[None, str]:
         """
-        Parse _IQStreamFileInfo or _IQStreamIQInfo to get acquisition status.
+        Parse an _IQStreamFileInfo struct to get the acquisition status.
 
-        Depending on the 'exit' parameter, this method will either raise an
-        error, or return a status string. Possible values for the
-        returned status indicator are:
+        Depending on the ``exit`` parameter, this method will either raise an
+        error or return a status string. Possible values for the
+        returned status string (when ``exit`` is False):
 
-        status | Definition
-        -------------------
-           0   | No error
-           1   | Input overrange.
-           2   | USB data stream discontinuity.
-           3   | Input buffer > 75% full.
-           4   | Input buffer overflow. IQ Stream processing
-               | too slow. Data loss has occurred.
-           5   | Output buffer > 75% full.
-           6   | Output buffer overflow. File writing
-               | too slow. Data loss has occurred.
+        - No error
+        - Input overrange.
+        - USB data stream discontinuity.
+        - Input buffer > 75% full.
+        - Input buffer overflow. IQ Stream processing
+          too slow. Data loss has occurred.
+        - Output buffer > 75% full.
+        - Output buffer overflow. File writing
+          too slow. Data loss has occurred.
+        - Invalid status code returned. Some always-zero bits are nonzero.
 
         In the case of multiple status codes being returned, the status
         string will contain all returned status strings, separated by line
@@ -2368,8 +2365,10 @@ class RSA:
         iq_stream_info : _IQStreamFileInfo
             The IQ streaming status information structure.
         exit : bool
-            If True, raise an exception for any error status in the IQ stream.
-            If False, return a flag representing the error, without raising an exception.
+            If True, raise an exception for any error or warning status in the
+                IQ stream. Return None if there is no error or warning.
+            If False, return a string indicating the status, without raising
+                an exception.
 
         Returns
         -------
@@ -2379,21 +2378,22 @@ class RSA:
         Raises
         ------
         RSAError
-            If errors have occurred during IQ streaming, and exit is True.
+            If errors or warnings have occurred during IQ streaming, and
+            ``exit`` is True.
         """
         status = iq_stream_info.acqStatus
+        status_str = ""
 
         # Handle no error case
         if status == 0:
             if exit:
                 return
             else:
-                return "No error."
+                status_str += "No error."
         else:
             # Construct status string if status != 0
-            status_str = ""
             if bool(status & 0x10000):  # mask bit 16
-                status_str += "Input overrange\n."
+                status_str += "Input overrange.\n"
             if bool(status & 0x20000):  # mask bit 17
                 status_str += "USB data stream discontinuity.\n"
             if bool(status & 0x40000):  # mask bit 18
@@ -2406,12 +2406,95 @@ class RSA:
             if bool(status & 0x200000):  # mask bit 21
                 status_str += "Output buffer overflow. File writing too slow, "
                 status_str += "data loss has occurred.\n"
+            if bool(status & 0xFFC00000):
+                status_str += (
+                    "Invalid status code returned. Some always-zero bits are nonzero."
+                )
             if exit:
                 # Raise error with full string if configured
                 raise RSAError(status_str)
+        return status_str
+
+    @staticmethod
+    def IQSTREAMIQInfo_StatusParser(
+        iq_stream_info: _IQStreamIQInfo, exit: bool = True
+    ) -> Union[None, str]:
+        """
+        Parse an _IQStreamIQInfo struct to get the acquisition status.
+
+        Depending on the ``exit`` parameter, this method will either raise an
+        error or return a status string. Possible values for the
+        returned status string (when ``exit`` is False):
+
+        - No error
+        - Input overrange.
+        - USB data stream discontinuity.
+        - Input buffer > 75% full.
+        - Input buffer overflow. IQ Stream processing
+          too slow. Data loss has occurred.
+        - Output buffer > 75% full.
+        - Output buffer overflow. File writing
+          too slow. Data loss has occurred.
+        - Invalid status code returned. Some always-zero bits are nonzero.
+
+        In the case of multiple status codes being returned, the status
+        string will contain all returned status strings, separated by line
+        breaks.
+
+        Parameters
+        ----------
+        iq_stream_info : _IQStreamIQInfo
+            The IQ streaming status information structure.
+        exit : bool
+            If True, raise an exception for any error or warning status in the
+                IQ stream. Return None if there is no error or warning.
+            If False, return a string indicating the status, without raising
+                an exception.
+
+        Returns
+        -------
+        status: str
+            A string containing all returned status messages.
+
+        Raises
+        ------
+        RSAError
+            If errors or warnings have occurred during IQ streaming, and
+            ``exit`` is True.
+        """
+        status = iq_stream_info.acqStatus
+        status_str = ""
+
+        # Handle no error case
+        if status == 0:
+            if exit:
+                return
             else:
-                # Or just return the status string
-                return status_str
+                status_str += "No error."
+        else:
+            # Construct status string if status != 0
+            if bool(status & 0x10000):  # mask bit 16
+                status_str += "Input overrange.\n"
+            if bool(status & 0x20000):  # mask bit 17
+                status_str += "USB data stream discontinuity.\n"
+            if bool(status & 0x40000):  # mask bit 18
+                status_str += "Input buffer > 75{} full.\n".format("%")
+            if bool(status & 0x80000):  # mask bit 19
+                status_str += "Input buffer overflow. IQStream processing too"
+                status_str += " slow, data loss has occurred.\n"
+            if bool(status & 0x100000):  # mask bit 20
+                status_str += "Output buffer > 75{} full.\n".format("%")
+            if bool(status & 0x200000):  # mask bit 21
+                status_str += "Output buffer overflow. File writing too slow, "
+                status_str += "data loss has occurred.\n"
+            if bool(status & 0xFFC00000):
+                status_str += (
+                    "Invalid status code returned. Some always-zero bits are nonzero."
+                )
+            if exit:
+                # Raise error with full string if configured
+                raise RSAError(status_str)
+        return f"{status_str}, {status=}"
 
     def SPECTRUM_Acquire(
         self, trace: str = "Trace1", trace_points: int = 801, timeout_msec: int = 50
@@ -2564,7 +2647,7 @@ class RSA:
             IQ data, with each element in the form (I + j*Q)
         iq_status : str (optional)
             The status string for the IQ capture, as defined in
-            the documentation for IQSTREAM_StatusParser().
+            the documentation for IQSTREAMIQInfo_StatusParser().
         """
         dest = _IQS_OUT_DEST[0]  # Client
         dtype = _IQS_OUT_DTYPE[0]  # Single
@@ -2618,7 +2701,7 @@ class RSA:
         assert len(iqdata) == iq_samples_requested
 
         if return_status:
-            iq_status = self.IQSTREAM_StatusParser(iqinfo, not return_status)
+            iq_status = self.IQSTREAMIQInfo_StatusParser(iqinfo, not return_status)
             return iqdata, iq_status
         else:
             return iqdata
