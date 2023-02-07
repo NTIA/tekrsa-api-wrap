@@ -2148,7 +2148,7 @@ class RSA:
             found_dev_str += "The following device was found:"
         elif num_found > 1:
             found_dev_str += "The following devices were found:"
-        for (k, v) in found_devices.items():
+        for k, v in found_devices.items():
             found_dev_str += f"\r\n{str(k)}: {str(v)}"
 
         if verbose:
