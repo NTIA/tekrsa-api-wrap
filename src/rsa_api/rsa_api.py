@@ -57,7 +57,10 @@ class _FreqRefUserInfo(Structure):
         ("isvalid", c_bool),
         ("dacValue", c_uint32),
         ("datetime", c_char * _DEVINFO_MAX_STRLEN),
-        ("temperature", c_double),
+        (
+            "temperature",
+            c_double,
+        ),  # Documentation indicates this field exists. Testing indicates otherwise.
     ]
 
 
@@ -527,7 +530,7 @@ class RSA:
         self.err_check(
             self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
         )
-        # Temperature result in o_fui is always 0.0 due to broke RSA API
+        # Temperature result in o_fui is always 0.0 due to broken RSA API
         # Therefore, it must be retrieved directly from i_usstr.
         # Strip checksum so temperature can be parsed (checksum has variable digits)
         i_usstr = i_usstr.value.decode("utf-8").split("*", 1)[0]
@@ -620,10 +623,7 @@ class RSA:
             self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(None))
         else:
             RSA.check_string(i_usstr)
-            if (
-                i_usstr == "Invalid User Setting"
-                or len(i_usstr) != _FREQ_REF_USER_SETTING_STRLEN
-            ):
+            if i_usstr == "Invalid User Setting":
                 raise RSAError("User setting is invalid.")
             i_usstr = c_char_p(i_usstr.encode("utf-8"))
             self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(i_usstr))
@@ -2597,9 +2597,7 @@ class RSA:
         The device temperature in the specified units.
         """
         # Store previous frequency reference setting
-        old_fru = (c_char * _FREQ_REF_USER_SETTING_STRLEN)()
-        self.err_check(self.rsa.CONFIG_GetFreqRefUserSetting(byref(old_fru)))
-        old_fru = old_fru.value.decode("utf-8")
+        old_fru = self.CONFIG_GetFreqRefUserSetting()
 
         # Update frequency reference setting to update temperature value
         self.CONFIG_SetFreqRefUserSetting(None)
