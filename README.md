@@ -85,6 +85,8 @@ help(rsa_api.RSA.IQSTREAM_Acquire)  # Does not require initalized RSA device
   - `DEVICE_GetNomenclature()` and `IQSTREAM_SetDiskFilenameBase()` are used instead.
 - `IQBLK_GetIQDataCplx()`
   - `IQBLK_GetIQData()` and `IQBLK_GetIQDataDeinterleaved()` are used instead.
+- `IQSTREAM_GetIQData()`
+  - Used internally by `IQSTREAM_Acquire()`, but not exposed for explicit use.
 
 ### List of API "Helper" functions
 
