@@ -3,6 +3,7 @@ Written for Tektronix RSA API for Linux v1.0.0014
 Refer to the RSA API Programming Reference Manual for details
 on any functions implemented from this module.
 """
+import logging
 import tempfile
 from ctypes import *
 from enum import Enum
@@ -11,6 +12,8 @@ from time import sleep
 from typing import Any, Tuple, Union
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 # GLOBAL CONSTANTS
 
@@ -2085,6 +2088,8 @@ class RSA:
         ----------
         verbose : bool
             Whether to print the steps of the process as they happen.
+            The information is printed using the native Python logger,
+            at the 'info' level.
 
         Raises
         ------
@@ -2093,32 +2098,30 @@ class RSA:
             device are found, or if connection fails.
         """
         if verbose:
-            print("Searching for devices...")
+            logger.info("Searching for devices...")
 
         found_devices = self.DEVICE_Search()
         num_found = len(found_devices)
 
-        # Zero devices found case handled within DEVICE_Search()
-        found_dev_str = ""
-        if num_found == 1:
-            found_dev_str += "The following device was found:"
-        elif num_found > 1:
-            found_dev_str += "The following devices were found:"
-        for k, v in found_devices.items():
-            found_dev_str += f"\r\n{str(k)}: {str(v)}"
-
         if verbose:
-            print(f"Device search completed.\n{found_dev_str}\n")
+            logger.info("Device search completed.")
+            # Zero devices found case handled within DEVICE_Search()
+            found_dev_str = (
+                f"The following device{'s were' if num_found > 1 else ' was'} found"
+            )
+            for k, v in found_devices.items():
+                found_dev_str += f"\r\n{str(k)}: {str(v)}"
+            logger.info(f"Device search completed.\n{found_dev_str}\n")
 
         # Multiple devices found case:
         if num_found > 1:
             raise RSAError(f"Found {num_found} devices, need exactly 1.")
         else:
             if verbose:
-                print("Connecting to device...")
-            self.DEVICE_Connect()
+                logger.info("Connecting to device...")
+            self.err_check(self.rsa.DEVICE_Connect(c_int(0)))
             if verbose:
-                print("Device connected.\n")
+                logger.info("Device connected.\n")
 
     def IQSTREAM_Tempfile_NoConfig(
         self, duration_msec: int, return_status: bool = False
