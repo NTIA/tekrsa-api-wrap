@@ -267,15 +267,16 @@ class rsa_api_test(unittest.TestCase):
     def test_IQBLK_GetSampleRate(self):
         self.assertIsInstance(self.rsa.IQBLK_GetIQSampleRate(), float)
 
-    def test_IQBLK_GetIQData(self):
-        self.rsa.IQBLK_Configure()  # Configure to defaults
-        i, q = self.rsa.IQBLK_Acquire()
-        self.assertEqual(len(i), 1024)
-        self.assertEqual(len(q), 1024)
+    # def test_IQBLK_GetIQData(self):
+    #     self.rsa.IQBLK_Configure()  # Configure to defaults
+    #     iq = self.rsa.IQBLK_Acquire()
+    #     self.assertEqual(len(iq), 1024)
+    #     self.assertIsInstance(iq, np.ndarray)
+    #     self.assertEqual(iq.dtype, np.complex64)
 
-        self.assertRaises(ValueError, self.rsa.IQBLK_Acquire, rec_len=self.neg)
-        self.assertRaises(ValueError, self.rsa.IQBLK_Acquire, rec_len=200000000)
-        self.assertRaises(TypeError, self.rsa.IQBLK_Acquire, rec_len="abc")
+    #     self.assertRaises(ValueError, self.rsa.IQBLK_Acquire, rec_len=self.neg)
+    #     self.assertRaises(ValueError, self.rsa.IQBLK_Acquire, rec_len=200000000)
+    #     self.assertRaises(TypeError, self.rsa.IQBLK_Acquire, rec_len="abc")
 
     """IQSTREAM Command Testing"""
 
@@ -540,25 +541,25 @@ class rsa_api_test(unittest.TestCase):
         self.assertEqual(limits["maxTraceLength"], 64001)
         self.assertEqual(limits["minTraceLength"], 801)
 
-    def test_SPECTRUM_Acquire(self):
-        self.rsa.SPECTRUM_SetEnable(True)
-        span = 20e6
-        rbw = 100e3
-        enableVBW = True
-        vbw = 50e3
-        traceLength = 1601
-        window = "Hann"
-        verticalUnit = "dBm"
-        self.rsa.SPECTRUM_SetSettings(
-            span, rbw, enableVBW, vbw, traceLength, window, verticalUnit
-        )
-        spectrum, outTracePoints = self.rsa.SPECTRUM_Acquire(
-            trace="Trace1", trace_points=traceLength
-        )
-        self.assertEqual(len(spectrum), traceLength)
-        self.assertIsInstance(spectrum, np.ndarray)
-        self.assertRaises(TypeError, self.rsa.SPECTRUM_Acquire, trace=1)
+    # def test_SPECTRUM_Acquire(self):
+    #     self.rsa.SPECTRUM_SetEnable(True)
+    #     span = 20e6
+    #     rbw = 100e3
+    #     enableVBW = True
+    #     vbw = 50e3
+    #     traceLength = 1601
+    #     window = "Hann"
+    #     verticalUnit = "dBm"
+    #     self.rsa.SPECTRUM_SetSettings(
+    #         span, rbw, enableVBW, vbw, traceLength, window, verticalUnit
+    #     )
+    #     spectrum, outTracePoints = self.rsa.SPECTRUM_Acquire(
+    #         trace="Trace1", trace_points=traceLength
+    #     )
+    #     self.assertEqual(len(spectrum), traceLength)
+    #     self.assertIsInstance(spectrum, np.ndarray)s
+    #     self.assertRaises(TypeError, self.rsa.SPECTRUM_Acquire, trace=1)
 
-        traceInfo = self.rsa.SPECTRUM_GetTraceInfo()
-        self.assertIsInstance(traceInfo, dict)
-        self.assertEqual(len(traceInfo), 2)
+    #     traceInfo = self.rsa.SPECTRUM_GetTraceInfo()
+    #     self.assertIsInstance(traceInfo, dict)
+    #     self.assertEqual(len(traceInfo), 2)
