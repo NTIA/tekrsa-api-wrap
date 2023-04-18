@@ -625,6 +625,11 @@ class RSA:
             RSA.check_string(i_usstr)
             if i_usstr == "Invalid User Setting":
                 raise RSAError("User setting is invalid.")
+            elif len(i_usstr) > _FREQ_REF_USER_SETTING_STRLEN:
+                raise RSAError(
+                    f"Frequency reference setting '{i_usstr}' is longer than the maximum"
+                    + f"allowed length {_FREQ_REF_USER_SETTING_STRLEN}"
+                )
             i_usstr = c_char_p(i_usstr.encode("utf-8"))
             self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(i_usstr))
 
