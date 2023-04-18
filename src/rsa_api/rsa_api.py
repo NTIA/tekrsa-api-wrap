@@ -20,15 +20,11 @@ logger = logging.getLogger(__name__)
 _MAX_NUM_DEVICES = 10  # Max num. of devices that could be found
 _MAX_SERIAL_STRLEN = 8  # Bytes allocated for serial number string
 _MAX_DEVTYPE_STRLEN = 8  # Bytes allocated for device type string
-_FPGA_VERSION_STRLEN = 6  # Bytes allocated for FPGA version number string
-_FW_VERSION_STRLEN = 6  # Bytes allocated for FW version number string
-_HW_VERSION_STRLEN = 4  # Bytes allocated for HW version number string
 _NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
-_API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
 _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
-_DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
+_DEVINFO_MAX_STRLEN = 100
 
 # ENUMERATION TUPLES
 
@@ -622,9 +618,9 @@ class RSA:
         string
             The FPGA version number.
         """
-        fpga_version = (c_char * _FPGA_VERSION_STRLEN)()
+        fpga_version = create_string_buffer(_DEVINFO_MAX_STRLEN)
         self.err_check(self.rsa.DEVICE_GetFPGAVersion(byref(fpga_version)))
-        return fpga_version.value.decode("utf-8")
+        return fpga_version.value.decode()
 
     def DEVICE_GetFWVersion(self) -> str:
         """
@@ -635,9 +631,9 @@ class RSA:
         string
             The firmware version number.
         """
-        fw_version = (c_char * _FW_VERSION_STRLEN)()
+        fw_version = create_string_buffer(_DEVINFO_MAX_STRLEN)
         self.err_check(self.rsa.DEVICE_GetFWVersion(byref(fw_version)))
-        return fw_version.value.decode("utf-8")
+        return fw_version.value.decode()
 
     def DEVICE_GetHWVersion(self) -> str:
         """
@@ -648,9 +644,9 @@ class RSA:
         string
             The hardware version number.
         """
-        hw_version = (c_char * _HW_VERSION_STRLEN)()
+        hw_version = create_string_buffer(_DEVINFO_MAX_STRLEN)
         self.err_check(self.rsa.DEVICE_GetHWVersion(byref(hw_version)))
-        return hw_version.value.decode("utf-8")
+        return hw_version.value.decode()
 
     def DEVICE_GetNomenclature(self) -> str:
         """
@@ -687,9 +683,9 @@ class RSA:
         string
             The API version number.
         """
-        api_version = (c_char * _API_VERSION_STRLEN)()
+        api_version = create_string_buffer(_DEVINFO_MAX_STRLEN)
         self.err_check(self.rsa.DEVICE_GetAPIVersion(byref(api_version)))
-        return api_version.value.decode("utf-8")
+        return api_version.value.decode()
 
     def DEVICE_PrepareForRun(self) -> None:
         """
