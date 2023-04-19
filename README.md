@@ -83,6 +83,9 @@ help(rsa_api.RSA.IQSTREAM_Acquire)  # Does not require initalized RSA device
   - Alternate error handling is implemented.
 - `DEVICE_GetNomenclatureW()` and `IQSTREAM_SetDiskFilenameBaseW()`
   - `DEVICE_GetNomenclature()` and `IQSTREAM_SetDiskFilenameBase()` are used instead.
+- `CONFIG_SetExternalRefEnable()`
+  - A comment in `RSA_API.h` indicates that `CONFIG_SetFrequencyReferenceSource()` should
+  be used instead.
 - `IQBLK_GetIQDataCplx()`
   - `IQBLK_GetIQData()` and `IQBLK_GetIQDataDeinterleaved()` are used instead.
 - `IQSTREAM_GetIQData()`

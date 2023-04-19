@@ -384,18 +384,6 @@ class RSA:
         }
         return fui
 
-    def CONFIG_SetExternalRefEnable(self, ext_ref_en: bool) -> None:
-        """
-        Enable or disable the external reference.
-
-        Parameters
-        ----------
-        ext_ref_en : bool
-            True enables the external reference. False disables it.
-        """
-        ext_ref_en = RSA.check_bool(ext_ref_en)
-        self.err_check(self.rsa.CONFIG_SetExternalRefEnable(c_bool(ext_ref_en)))
-
     def CONFIG_SetFrequencyReferenceSource(self, src: str) -> None:
         """
         Select the device frequency reference source.
