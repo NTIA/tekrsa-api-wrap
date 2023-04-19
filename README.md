@@ -116,7 +116,7 @@ wrapper is limited in certain ways. The list of known issues is provided by Tekt
 the [Tektronix RSA API for Linux release notes](https://download.tek.com/software/supporting_files/ReleaseNotes_1_0_0014_64bit_066207701.txt)
 (up-to-date as of version 1.0.0014).
 
-### TODO: Update this section after resolving
+#### IQ Capture Status Flags
 
 Additionally, a known issue exists with parsing IQ streaming status data structures.
 There appears to be a discrepancy between the documented status message encoding scheme
