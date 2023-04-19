@@ -857,10 +857,10 @@ class RSA:
         acq_info = _IQBlkAcqInfo()
         self.err_check(self.rsa.IQBLK_GetIQAcqInfo(byref(acq_info)))
         info = (
-            acq_info.sample0Timestamp.value,
-            acq_info.triggerSampleIndex.value,
-            acq_info.triggerTimestamp.value,
-            acq_info.acqStatus.value,
+            acq_info.sample0Timestamp,
+            acq_info.triggerSampleIndex,
+            acq_info.triggerTimestamp,
+            acq_info.acqStatus,
         )
         return info
 
