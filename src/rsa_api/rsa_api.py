@@ -17,14 +17,13 @@ logger = logging.getLogger(__name__)
 
 # GLOBAL CONSTANTS
 
-_MAX_NUM_DEVICES = 10  # Max num. of devices that could be found
-_MAX_SERIAL_STRLEN = 8  # Bytes allocated for serial number string
-_MAX_DEVTYPE_STRLEN = 8  # Bytes allocated for device type string
-_NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
+_DEVINFO_MAX_STRLEN = 100
+_DEVSRCH_MAX_NUM_DEVICES = 20
+_DEVSRCH_SERIAL_MAX_STRLEN = 100
+_DEVSRCH_TYPE_MAX_STRLEN = 20
 _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
-_DEVINFO_MAX_STRLEN = 100
 
 # ENUMERATION TUPLES
 
@@ -657,9 +656,9 @@ class RSA:
         string
             Name of the device.
         """
-        nomenclature = (c_char * _NOMENCLATURE_STRLEN)()
+        nomenclature = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetNomenclature(byref(nomenclature)))
-        return nomenclature.value.decode("utf-8")
+        return nomenclature.value.decode()
 
     def DEVICE_GetSerialNumber(self) -> str:
         """
@@ -670,9 +669,9 @@ class RSA:
         string
             Serial number of the device.
         """
-        serial_num = (c_char * _MAX_SERIAL_STRLEN)()
+        serial_num = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetSerialNumber(byref(serial_num)))
-        return serial_num.value.decode("utf-8")
+        return serial_num.value.decode()
 
     def DEVICE_GetAPIVersion(self) -> str:
         """
@@ -780,17 +779,21 @@ class RSA:
         RSAError
             If no devices are found.
         """
-        num_found = c_int()
-        dev_ids = (c_int * _MAX_NUM_DEVICES)()
-        dev_serial = ((c_char * _MAX_NUM_DEVICES) * _MAX_SERIAL_STRLEN)()
-        dev_type = ((c_char * _MAX_NUM_DEVICES) * _MAX_DEVTYPE_STRLEN)()
+        num_found = c_int(0)
+        dev_ids = (c_int * _DEVSRCH_MAX_NUM_DEVICES)()
+        dev_serial = (
+            (c_char * _DEVSRCH_SERIAL_MAX_STRLEN) * _DEVSRCH_MAX_NUM_DEVICES
+        )()
+        dev_type = ((c_char * _DEVSRCH_TYPE_MAX_STRLEN) * _DEVSRCH_MAX_NUM_DEVICES)()
 
+        # The API function called here crashes ("Aborted (core dumped)") when
+        # multiple RSA devices are attached.
         self.err_check(
-            self.rsa.DEVICE_Search(
-                byref(num_found), byref(dev_ids), dev_serial, dev_type
-            )
+            self.rsa.DEVICE_Search(byref(num_found), dev_ids, dev_serial, dev_type)
         )
 
+        # Despite the crashing behavior, anticipate the possibility of
+        # multiple devices being detected and construct a dictionary
         found_devices = {
             ID: (dev_serial[ID].value.decode(), dev_type[ID].value.decode())
             for ID in dev_ids
@@ -799,7 +802,7 @@ class RSA:
         # If there are no devices, there is still a dict returned
         # with a device ID, but the other elements are empty.
         if found_devices[0] == ("", ""):
-            raise RSAError("Could not find a matching Tektronix RSA device.")
+            raise RSAError("Could not find a Tektronix RSA device.")
         else:
             return found_devices
 
