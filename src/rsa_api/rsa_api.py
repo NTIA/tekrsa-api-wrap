@@ -963,6 +963,9 @@ class RSA:
         """
         Query the IQ sample rate value.
 
+        The acquisition bandwidth should be set using `IQBLK_SetIQBandwidth()`
+        before calling.
+
         Returns
         -------
         float
@@ -988,6 +991,9 @@ class RSA:
     def IQBLK_GetMaxIQRecordLength(self) -> int:
         """
         Query the maximum IQ record length.
+
+        The acquisition bandwidth should be set using `IQBLK_SetIQBandwidth()`
+        before calling.
 
         Returns
         -------
