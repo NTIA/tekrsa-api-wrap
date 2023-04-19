@@ -734,29 +734,21 @@ class RSA:
         self.err_check(self.rsa.DEVICE_GetOverTemperatureStatus(byref(over_temp)))
         return over_temp.value
 
-    def DEVICE_Reset(self, device_id: int = -1) -> None:
+    def DEVICE_Reset(self, device_id: int = 0) -> None:
         """
-        Reboot the specified device.
+        Disconnect, reboot, and connect to the specified device.
 
         Parameters
         ----------
         device_id : int
-            The device ID of the target device.
-
-        Raises
-        ------
-        RSAError
-            If multiple devices are found but no device ID is specified.
+            The device ID of the target device. Defaults to 0 (correct for
+            a single attached device).
         """
         device_id = RSA.check_int(device_id)
-        self.DEVICE_Disconnect()
-        found_devices = self.DEVICE_Search()
-        num_found = len(found_devices)
-        if num_found == 1:
-            device_id = 0
-        elif num_found > 1 and device_id == -1:
-            raise RSAError("Multiple devices found, but no ID specified.")
-        self.err_check(self.rsa.DEVICE_Reset(c_int(device_id)))
+        device_id = c_int(device_id)
+        self.rsa.DEVICE_Disconnect()
+        self.err_check(self.rsa.DEVICE_Reset(device_id))
+        self.rsa.DEVICE_Connect(device_id)
 
     def DEVICE_Run(self) -> None:
         """Start data acquisition."""
