@@ -2,14 +2,13 @@
 This is a test for the entire API Wrapper.
 It requires a compatible RSA device to be connected.
 """
+import faulthandler
 import unittest
 from os import environ, mkdir
 from os.path import isdir
 from time import sleep
 
-import numpy as np
-
-import src.rsa_api as rsa_api
+import rsa_api
 
 
 class rsa_api_test(unittest.TestCase):
@@ -17,6 +16,7 @@ class rsa_api_test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        faulthandler.enable()
         cls.rsa = rsa_api.RSA(so_dir=environ["SO_DIR"])
         cls.rsa.DEVICE_Connect(0)
         cls.device = cls.rsa.DEVICE_GetNomenclature()
