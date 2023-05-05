@@ -12,7 +12,8 @@ from time import sleep
 from typing import Any, Tuple, Union
 
 import numpy as np
-from return_status import ReturnStatus
+
+from .return_status import ReturnStatus
 
 logger = logging.getLogger(__name__)
 
@@ -2208,7 +2209,7 @@ class RSA:
             if exit:
                 # Raise error with full string if configured
                 raise RSAError(status_str)
-        return status_str
+        return status_str.rstrip()
 
     @staticmethod
     def IQSTREAMIQInfo_StatusParser(
@@ -2289,7 +2290,7 @@ class RSA:
             if exit:
                 # Raise error with full string if configured
                 raise RSAError(status_str)
-        return f"{status_str}, {status=}"
+        return f"{status_str.rstrip()}, {status=}"
 
     def SPECTRUM_Acquire(
         self, trace: str = "Trace1", trace_points: int = 801, timeout_msec: int = 50
@@ -2422,7 +2423,7 @@ class RSA:
         return temp
 
     def IQSTREAM_Acquire(
-        self, duration_msec: int, return_status: bool
+        self, duration_msec: int, return_status: bool, buffer_size: int = 131072
     ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
         """
         Stream IQ data to a NumPy array.
@@ -2447,27 +2448,22 @@ class RSA:
         # Ensure device is not streaming data before proceeding
         self.err_check(self.rsa.DEVICE_Stop())
 
-        # Configure IQ Streaming
+        # Configure IQ Streaming (SINGLE to CLIENT)
+        self.err_check(self.rsa.IQSTREAM_SetOutputConfiguration(c_int(0), c_int(0)))
+        acq_bandwidth_Hz, sample_rate_Hz = c_double(), c_double()
         self.err_check(
-            self.rsa.IQSTREAM_SetOutputConfiguration(c_int(0), c_int(0))
-        )  # Stream "SINGLE" to "CLIENT"
-        _, sample_rate_Hz = c_double(), c_double()
-        self.err_check(
-            self.rsa.IQSTREAM_GetAcqParameters(byref(_), byref(sample_rate_Hz))
-        )
-        iq_samples_requested = duration_msec * 1e-3 * sample_rate_Hz.value
-        if not iq_samples_requested.is_integer():
-            logger.warning(
-                f"Requested {iq_samples_requested} IQ samples. Rounding up to nearest integer."
+            self.rsa.IQSTREAM_GetAcqParameters(
+                byref(acq_bandwidth_Hz), byref(sample_rate_Hz)
             )
-        iq_samples_requested = math.ceil(iq_samples_requested)
+        )
+        iq_samples_requested = math.ceil(duration_msec * 1e-3 * sample_rate_Hz.value)
+        self.err_check(self.rsa.IQSTREAM_ClearAcqStatus())
 
-        # Initialize data buffer
-        self.err_check(
-            self.rsa.IQSTREAM_SetIQDataBufferSize(c_int(1000000))
-        )  # Request the maximum buffer size
+        # Initialize data buffer (default 131,072 IQ sample pairs = 1 MiB)
+        self.err_check(self.rsa.IQSTREAM_SetIQDataBufferSize(c_int(buffer_size)))
         buffer_size = c_int(0)  # To store actual buffer size, in sample pairs
         self.err_check(self.rsa.IQSTREAM_GetIQDataBufferSize(byref(buffer_size)))
+        logger.debug(f"Set IQSTREAM buffer size {buffer_size.value}")
         buffer_time_msec = c_int(
             round((buffer_size.value / sample_rate_Hz.value) * 1e3)
         )
@@ -2475,11 +2471,11 @@ class RSA:
         iqdata_c = (c_float * 2 * buffer_size.value)()
         iq_block_len_c = c_int(5)
         iq_stream_info = _IQStreamFileInfo()
+        # Allocate memory for the result data array
         iqdata = np.empty(iq_samples_requested, dtype=np.complex64)
 
         # Start data streaming
         iq_stream_enabled = c_bool(False)
-        self.err_check(self.rsa.IQSTREAM_ClearAcqStatus())
         self.err_check(self.rsa.DEVICE_Run())
         self.err_check(self.rsa.IQSTREAM_Start())
         self.err_check(self.rsa.IQSTREAM_GetEnable(byref(iq_stream_enabled)))
@@ -2487,40 +2483,42 @@ class RSA:
 
         iq_samples_received = 0
         while iq_samples_received < iq_samples_requested:
-            # Block while RSA buffer fills
-            while not buffer_ready.value:
+            while not buffer_ready.value:  # Block while RSA buffer fills
                 self.err_check(
                     self.rsa.IQSTREAM_WaitForIQDataReady(
                         buffer_time_msec, byref(buffer_ready)
                     )
                 )
-            # Then retrieve IQ data (interleaved)
             self.err_check(
-                self.rsa.IQSTREAM_GetIQData(
+                self.rsa.IQSTREAM_GetIQData(  # Then retrieve IQ data (interleaved)
                     byref(iqdata_c), byref(iq_block_len_c), byref(iq_stream_info)
                 )
             )
-            iq_block_len = int(iq_block_len_c.value)  # Number of IQ samples PAIRS
-
+            iq_block_len = int(iq_block_len_c.value)  # Number of IQ sample pairs
             if iq_block_len != 0:
                 # Convert interleaved IQ to complex NumPy array
-                iq_block_data = np.array(iqdata_c).view(np.complex64)
-
+                iq_block_data = np.array(iqdata_c).view(np.complex64).squeeze()
                 # Store the newly-retrieved samples, discarding some if they
                 # are not needed to meet the total number of requested samples
-                iqdata[iq_samples_received : iq_samples_received + iq_block_len] = (
-                    iq_block_data
-                    if iq_samples_received + iq_block_len <= iq_samples_requested
-                    else iq_block_data[: iq_samples_requested - iq_samples_received]
-                )
-
-                iq_samples_received += iq_block_len
-
+                if iq_block_len + iq_samples_received <= iq_samples_requested:
+                    samples_to_keep = (
+                        iq_block_len  # Add all samples from buffer to iqdata
+                    )
+                else:
+                    # Otherwise only keep what's needed to reach iq_samples_requested
+                    samples_to_keep = iq_samples_requested - iq_samples_received
+                iqdata[
+                    iq_samples_received : iq_samples_received + iq_block_len
+                ] = iq_block_data[:samples_to_keep]
+                iq_samples_received += samples_to_keep
         # Stop data streaming
         self.err_check(self.rsa.IQSTREAM_Stop())
         self.err_check(self.rsa.DEVICE_Stop())
         assert (
-            len(iqdata) == iq_samples_requested
+            # More samples than requested is OK: it means that the final
+            # samples in the buffer have been discarded.
+            iq_samples_received
+            >= iq_samples_requested
         ), "Incorrect number of IQ samples acquired"
 
         # Parse sticky bits in status message
