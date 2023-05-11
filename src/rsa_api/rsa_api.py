@@ -2221,7 +2221,7 @@ class RSA:
             self.DEVICE_Run()
             self.IQSTREAM_Start()
             while not complete:
-                sleep(sleep_time_sec)
+                #sleep(sleep_time_sec)
                 complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
             self.IQSTREAM_Stop()
 
@@ -2313,7 +2313,7 @@ class RSA:
             self.DEVICE_Run()
             self.IQSTREAM_Start()
             while not complete:
-                sleep(sleep_time_sec)
+                #sleep(sleep_time_sec)
                 complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
             self.IQSTREAM_Stop()
 
@@ -2530,7 +2530,7 @@ class RSA:
         ready = False
         while not ready:
             ready = self.SPECTRUM_WaitForTraceReady(timeout_msec)
-            sleep(int(timeout_msec * 1e-3))
+           # sleep(int(timeout_msec * 1e-3))
         return self.SPECTRUM_GetTrace(trace, trace_points)
 
     def IQBLK_Configure(
@@ -2584,7 +2584,7 @@ class RSA:
         ready = False
         while not ready:
             ready = self.IQBLK_WaitForIQDataReady(timeout_ms)
-            sleep(int(timeout_ms * 1e-3))
+            #sleep(int(timeout_ms * 1e-3))
         return self.IQBLK_GetIQDataDeinterleaved(req_length=rec_len)
 
     def DEVICE_GetTemperature(self, unit: str = "celsius") -> float:
