@@ -2233,7 +2233,7 @@ class RSA:
 
             # Read data back in from file
             with open(filename_base + ".siqd", "rb") as f:
-                d = np.frombuffer(f.read(), dtype=np.float32)
+                d = np.copy(np.frombuffer(f.read(), dtype=np.float32))
 
         # Deinterleave I and Q
         i = d[0:-1:2]
