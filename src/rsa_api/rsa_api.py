@@ -2216,10 +2216,10 @@ class RSA:
             self.DEVICE_PrepareForRun()
 
             # Collect data
-            complete = False
-
             self.DEVICE_Run()
             self.IQSTREAM_Start()
+            sleep((duration_msec + 1)/1000)
+            complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
             while not complete:
                 sleep(sleep_time_sec)
                 complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
