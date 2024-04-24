@@ -2224,7 +2224,7 @@ class RSA:
                 sleep(sleep_time_sec)
                 complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
             self.IQSTREAM_Stop()
-            device_stop_status = self.DEVICE_Stop()
+            self.DEVICE_Stop()
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
             iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
@@ -2233,7 +2233,7 @@ class RSA:
 
             # Read data back in from file
             with open(filename_base + ".siqd", "rb") as f:
-                d = np.copy(np.frombuffer(f.read(), dtype=np.float32))
+                d = np.copy(np.fromfile(f, dtype=np.float32))
 
         # Deinterleave I and Q
         i = d[0:-1:2]
