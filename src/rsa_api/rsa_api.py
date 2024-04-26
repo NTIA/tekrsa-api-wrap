@@ -144,10 +144,10 @@ class RSA:
         """Load the RSA USB Driver"""
         # Param. 'so_dir' is the directory containing libRSA_API.so and
         # libcyusb_shared.so.
-        rtld_lazy = 0x0001
-        lazy_load = rtld_lazy | RTLD_GLOBAL
-        self.rsa = CDLL(join(abspath(so_dir), "libRSA_API.so"), lazy_load)
-        self.usb_api = CDLL(join(abspath(so_dir), "libcyusb_shared.so"), lazy_load)
+        self.rtld_lazy = 0x0001
+        self.lazy_load = self.rtld_lazy | RTLD_GLOBAL
+        self.rsa = CDLL(join(abspath(so_dir), "libRSA_API.so"), self.lazy_load)
+        self.usb_api = CDLL(join(abspath(so_dir), "libcyusb_shared.so"), self.lazy_load)
 
     """ ERROR HANDLING """
 
