@@ -144,6 +144,25 @@ class RSA:
         """Load the RSA USB Driver"""
         # Param. 'so_dir' is the directory containing libRSA_API.so and
         # libcyusb_shared.so.
+        self.trigger_level = None
+        self.trace_enable = None
+        self.det_val = None
+        self.trace_val = None
+        self.enable = None
+        self.max_trace_points = None
+        self.trace_data = None
+        self.datatype = None
+        self.destination = None
+        self.iq_buffer_size = None
+        self.filename_suffix = None
+        self.disk_filename_base = None
+        self.acq_bandwidth = None
+        self.record_length = None
+        self.iq_bandwidth = None
+        self.min_iq_bandwidth = None
+        self.max_iq_bandwidth = None
+        self.rf_attenuator = None
+        self.out_trace_points = c_int()
         self.rtld_lazy = 0x0001
         self.lazy_load = self.rtld_lazy | RTLD_GLOBAL
         self.rsa = CDLL(join(abspath(so_dir), "libRSA_API.so"), self.lazy_load)
@@ -734,7 +753,8 @@ class RSA:
         value = RSA.check_num(value)
         value = RSA.check_range(value, -51, 0)
         self.rsa.DEVICE_Stop()
-        self.err_check(self.rsa.CONFIG_SetRFAttenuator(c_double(value)))
+        self.rf_attenuator = c_double(value)
+        self.err_check(self.rsa.CONFIG_SetRFAttenuator(self.rf_attenuator))
         self.rsa.DEVICE_Run()
 
     # DEVICE METHODS
@@ -1199,10 +1219,13 @@ class RSA:
             IQ bandwidth value measured in Hz
         """
         iq_bandwidth = RSA.check_num(iq_bandwidth)
+        self.min_iq_bandwidth =  self.IQBLK_GetMinIQBandwidth()
+        self.max_iq_bandwidth = self.IQBLK_GetMaxIQBandwidth()
+        self.iq_bandwidth = c_double(iq_bandwidth)
         iq_bandwidth = RSA.check_range(
-            iq_bandwidth, self.IQBLK_GetMinIQBandwidth(), self.IQBLK_GetMaxIQBandwidth()
+            self.iq_bandwidth,self.min_iq_bandwidth, self.max_iq_bandwidth
         )
-        self.err_check(self.rsa.IQBLK_SetIQBandwidth(c_double(iq_bandwidth)))
+        self.err_check(self.rsa.IQBLK_SetIQBandwidth(self.iq_bandwidth))
 
     def IQBLK_SetIQRecordLength(self, record_length: int) -> None:
         """
@@ -1217,7 +1240,8 @@ class RSA:
         record_length = RSA.check_range(
             record_length, 2, self.IQBLK_GetMaxIQRecordLength()
         )
-        self.err_check(self.rsa.IQBLK_SetIQRecordLength(c_int(record_length)))
+        self.record_length = c_int(record_length)
+        self.err_check(self.rsa.IQBLK_SetIQRecordLength(self.record_length))
 
     def IQBLK_WaitForIQDataReady(self, timeout_msec: int) -> bool:
         """
@@ -1464,7 +1488,8 @@ class RSA:
             self.IQSTREAM_GetMaxAcqBandwidth(),
         )
         self.rsa.DEVICE_Stop()
-        self.err_check(self.rsa.IQSTREAM_SetAcqBandwidth(c_double(bw_hz_req)))
+        self.acq_bandwidth = c_double(bw_hz_req)
+        self.err_check(self.rsa.IQSTREAM_SetAcqBandwidth(self.acq_bandwidth))
         self.rsa.DEVICE_Run()
 
     def IQSTREAM_SetDiskFileLength(self, msec: int) -> None:
@@ -1490,7 +1515,8 @@ class RSA:
             Base filename for file output.
         """
         filename_base = RSA.check_string(filename_base)
-        self.err_check(self.rsa.IQSTREAM_SetDiskFilenameBaseW(c_wchar_p(filename_base)))
+        self.disk_filename_base = c_wchar_p(filename_base)
+        self.err_check(self.rsa.IQSTREAM_SetDiskFilenameBaseW(self.disk_filename_base))
 
     def IQSTREAM_SetDiskFilenameSuffix(self, suffix_ctl: int) -> None:
         """
@@ -1503,7 +1529,8 @@ class RSA:
         """
         suffix_ctl = RSA.check_int(suffix_ctl)
         suffix_ctl = RSA.check_range(suffix_ctl, -2, float("inf"))
-        self.err_check(self.rsa.IQSTREAM_SetDiskFilenameSuffix(c_int(suffix_ctl)))
+        self.filename_suffix = c_int(suffix_ctl)
+        self.err_check(self.rsa.IQSTREAM_SetDiskFilenameSuffix(self.filename_suffix))
 
     def IQSTREAM_SetIQDataBufferSize(self, req_size: int) -> None:
         """
@@ -1521,7 +1548,8 @@ class RSA:
             sets to the maximum size.
         """
         req_size = RSA.check_int(req_size)
-        self.err_check(self.rsa.IQSTREAM_SetIQDataBufferSize(c_int(req_size)))
+        self.iq_buffer_size = c_int(req_size)
+        self.err_check(self.rsa.IQSTREAM_SetIQDataBufferSize(self.iq_buffer_size))
 
     def IQSTREAM_SetOutputConfiguration(self, dest: str, dtype: str) -> None:
         """
@@ -1562,9 +1590,10 @@ class RSA:
                     + " single precision data type."
                 )
             else:
-                val1 = c_int(_IQS_OUT_DEST.index(dest))
-                val2 = c_int(_IQS_OUT_DTYPE.index(dtype))
-                self.err_check(self.rsa.IQSTREAM_SetOutputConfiguration(val1, val2))
+                self.destination = c_int(_IQS_OUT_DEST.index(dest))
+                self.datatype = c_int(_IQS_OUT_DTYPE.index(dtype))
+            
+                self.err_check(self.rsa.IQSTREAM_SetOutputConfiguration(self.destination, self.datatype))
         else:
             raise RSAError("Input data type or destination string invalid.")
 
@@ -1752,14 +1781,14 @@ class RSA:
             trace_val = c_int(_SPECTRUM_TRACES.index(trace))
         else:
             raise RSAError("Invalid trace input.")
-        trace_data = (c_float * max_trace_points)()
-        out_trace_points = c_int()
+        self.trace_data = (c_float * max_trace_points)()
+        self.max_trace_points = c_int(max_trace_points)
         self.err_check(
             self.rsa.SPECTRUM_GetTrace(
-                trace_val,
-                c_int(max_trace_points),
-                byref(trace_data),
-                byref(out_trace_points),
+                self.trace_val,
+                self.max_trace_points,
+                byref(self.trace_data),
+                byref(self.out_trace_points),
             )
         )
         return np.ctypeslib.as_array(trace_data), out_trace_points.value
@@ -1834,8 +1863,8 @@ class RSA:
         enable : bool
             True enables the spectrum measurement. False disables it.
         """
-        enable = RSA.check_bool(enable)
-        self.err_check(self.rsa.SPECTRUM_SetEnable(c_bool(enable)))
+        self.enable = c_bool(RSA.check_bool(enable))
+        self.err_check(self.rsa.SPECTRUM_SetEnable(self.enable))
 
     def SPECTRUM_SetSettings(
         self,
@@ -1914,10 +1943,11 @@ class RSA:
         trace = RSA.check_string(trace)
         detector = RSA.check_string(detector)
         if trace in _SPECTRUM_TRACES and detector in _SPECTRUM_DETECTORS:
-            trace_val = c_int(_SPECTRUM_TRACES.index(trace))
-            det_val = c_int(_SPECTRUM_DETECTORS.index(detector))
+            self.trace_val = c_int(_SPECTRUM_TRACES.index(trace))
+            self.det_val = c_int(_SPECTRUM_DETECTORS.index(detector))
+            self.trace_enable = c_bool(enable)
             self.err_check(
-                self.rsa.SPECTRUM_SetTraceType(trace_val, c_bool(enable), det_val)
+                self.rsa.SPECTRUM_SetTraceType(self.trace_val, self.trace_enable, self.det_val)
             )
         else:
             raise RSAError("Trace or detector type input invalid.")
@@ -2031,7 +2061,8 @@ class RSA:
         """
         level = RSA.check_num(level)
         level = RSA.check_range(level, -130, 30)
-        self.err_check(self.rsa.TRIG_SetIFPowerTriggerLevel(c_double(level)))
+        self.trigger_level = c_double(level)
+        self.err_check(self.rsa.TRIG_SetIFPowerTriggerLevel(self.trigger_level))
 
     def TRIG_SetTriggerMode(self, mode: str) -> None:
         """
