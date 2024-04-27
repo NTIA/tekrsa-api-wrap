@@ -144,6 +144,7 @@ class RSA:
         """Load the RSA USB Driver"""
         # Param. 'so_dir' is the directory containing libRSA_API.so and
         # libcyusb_shared.so.
+        self.ref_level = None
         self.trigger_level = None
         self.trace_enable = None
         self.det_val = None
@@ -663,7 +664,8 @@ class RSA:
         """
         ref_level = RSA.check_num(ref_level)
         ref_level = RSA.check_range(ref_level, -130, 30)
-        self.err_check(self.rsa.CONFIG_SetReferenceLevel(c_double(ref_level)))
+        self.ref_level = c_double(ref_level)
+        self.err_check(self.rsa.CONFIG_SetReferenceLevel(self.ref_level))
 
     def CONFIG_GetAutoAttenuationEnable(self) -> bool:
         """
