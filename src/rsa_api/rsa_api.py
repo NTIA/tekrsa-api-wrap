@@ -144,6 +144,16 @@ class RSA:
         """Load the RSA USB Driver"""
         # Param. 'so_dir' is the directory containing libRSA_API.so and
         # libcyusb_shared.so.
+        self.trigger_source = None
+        self.trigger_position_percent = None
+        self.trigger_mode = None
+        self.spectrum_settings = None
+        self.disk_file_length = None
+        self.frequency_reference_source = None
+        self.enable_preamp = None
+        self.user_frequency_reference = None
+        self.enable_external_reference = None
+        self.center_frequency = None
         self.ref_level = None
         self.trigger_level = None
         self.trace_enable = None
@@ -511,7 +521,8 @@ class RSA:
         self.err_check(self.rsa.CONFIG_Preset())
         # For some reason, the record length is not successfully set.
         # Manual override:
-        self.err_check(self.rsa.IQBLK_SetIQRecordLength(1024))
+        self.record_length = 1024
+        self.err_check(self.rsa.IQBLK_SetIQRecordLength(self.record_length))
 
     def CONFIG_SetCenterFreq(self, cf: Union[float, int]) -> None:
         """
@@ -526,7 +537,8 @@ class RSA:
         cf = RSA.check_range(
             cf, self.CONFIG_GetMinCenterFreq(), self.CONFIG_GetMaxCenterFreq()
         )
-        self.err_check(self.rsa.CONFIG_SetCenterFreq(c_double(cf)))
+        self.center_frequency = c_double(cf)
+        self.err_check(self.rsa.CONFIG_SetCenterFreq(self.center_frequency))
 
     def CONFIG_DecodeFreqRefUserSettingString(self, i_usstr: str) -> dict:
         """
@@ -574,7 +586,8 @@ class RSA:
             True enables the external reference. False disables it.
         """
         ext_ref_en = RSA.check_bool(ext_ref_en)
-        self.err_check(self.rsa.CONFIG_SetExternalRefEnable(c_bool(ext_ref_en)))
+        self.enable_external_reference = c_bool(ext_ref_en)
+        self.err_check(self.rsa.CONFIG_SetExternalRefEnable(self.enable_external_reference))
 
     def CONFIG_SetFrequencyReferenceSource(self, src: str) -> None:
         """
@@ -599,8 +612,8 @@ class RSA:
             if src == "GNSS" and self.DEVICE_GetNomenclature() in ["RSA306", "RSA306B"]:
                 raise RSAError("RSA 300 series device does not support GNSS reference.")
             else:
-                value = c_int(_FREQ_REF_SOURCE.index(src))
-                self.err_check(self.rsa.CONFIG_SetFrequencyReferenceSource(value))
+                self.frequency_reference_source = c_int(_FREQ_REF_SOURCE.index(src))
+                self.err_check(self.rsa.CONFIG_SetFrequencyReferenceSource(self.frequency_reference_source))
         else:
             raise RSAError("Input does not match a valid setting.")
 
@@ -650,8 +663,8 @@ class RSA:
                     f"Frequency reference setting '{i_usstr}' is longer than the maximum"
                     + f"allowed length {_FREQ_REF_USER_SETTING_STRLEN}"
                 )
-            i_usstr = c_char_p(i_usstr.encode("utf-8"))
-            self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(i_usstr))
+            self.user_frequency_reference = c_char_p(i_usstr.encode("utf-8"))
+            self.err_check(self.rsa.CONFIG_SetFreqRefUserSetting(self.user_frequency_reference))
 
     def CONFIG_SetReferenceLevel(self, ref_level: Union[float, int]) -> None:
         """
@@ -694,7 +707,8 @@ class RSA:
         """
         enable = RSA.check_bool(enable)
         self.rsa.DEVICE_Stop()
-        self.err_check(self.rsa.CONFIG_SetAutoAttenuationEnable(c_bool(enable)))
+        self.enable_auto_attenation = c_bool(enable)
+        self.err_check(self.rsa.CONFIG_SetAutoAttenuationEnable(self.enable_auto_attenation))
         self.rsa.DEVICE_Run()
 
     def CONFIG_GetRFPreampEnable(self) -> bool:
@@ -724,7 +738,8 @@ class RSA:
         """
         enable = RSA.check_bool(enable)
         self.rsa.DEVICE_Stop()
-        self.err_check(self.rsa.CONFIG_SetRFPreampEnable(c_bool(enable)))
+        self.enable_preamp = c_bool(enable)
+        self.err_check(self.rsa.CONFIG_SetRFPreampEnable(self.enable_preamp))
         self.rsa.DEVICE_Run()
 
     def CONFIG_GetRFAttenuator(self) -> float:
@@ -1505,7 +1520,8 @@ class RSA:
         """
         msec = RSA.check_int(msec)
         msec = RSA.check_range(msec, 0, float("inf"))
-        self.err_check(self.rsa.IQSTREAM_SetDiskFileLength(c_int(msec)))
+        self.disk_file_length = c_int(msec)
+        self.err_check(self.rsa.IQSTREAM_SetDiskFileLength(self.disk_file_length))
 
     def IQSTREAM_SetDiskFilenameBase(self, filename_base: str) -> None:
         """
@@ -1908,15 +1924,15 @@ class RSA:
         win = RSA.check_string(win)
         vert_unit = RSA.check_string(vert_unit)
         if win in _SPECTRUM_WINDOWS and vert_unit in _SPECTRUM_VERTICAL_UNITS:
-            settings = _SpectrumSettings()
-            settings.span = RSA.check_num(span)
-            settings.rbw = RSA.check_num(rbw)
-            settings.enableVBW = RSA.check_bool(enable_vbw)
-            settings.vbw = RSA.check_num(vbw)
-            settings.traceLength = RSA.check_int(trace_len)
-            settings.window = _SPECTRUM_WINDOWS.index(win)
-            settings.verticalUnit = _SPECTRUM_VERTICAL_UNITS.index(vert_unit)
-            self.err_check(self.rsa.SPECTRUM_SetSettings(settings))
+            self.spectrum_settings = _SpectrumSettings()
+            self.spectrum_settings.span = RSA.check_num(span)
+            self.spectrum_settings.rbw = RSA.check_num(rbw)
+            self.spectrum_settings.enableVBW = RSA.check_bool(enable_vbw)
+            self.spectrum_settings.vbw = RSA.check_num(vbw)
+            self.spectrum_settings.traceLength = RSA.check_int(trace_len)
+            self.spectrum_settings.window = _SPECTRUM_WINDOWS.index(win)
+            self.spectrum_settings.verticalUnit = _SPECTRUM_VERTICAL_UNITS.index(vert_unit)
+            self.err_check(self.rsa.SPECTRUM_SetSettings(self.spectrum_settings))
         else:
             raise RSAError("Window or vertical unit input invalid.")
 
@@ -2084,7 +2100,8 @@ class RSA:
         mode = RSA.check_string(mode)
         if mode.lower() in _TRIGGER_MODE:
             mode_value = _TRIGGER_MODE.index(mode.lower())
-            self.err_check(self.rsa.TRIG_SetTriggerMode(c_int(mode_value)))
+            self.trigger_mode = c_int(mode_value)
+            self.err_check(self.rsa.TRIG_SetTriggerMode(self.trigger_mode))
         else:
             raise RSAError("Invalid trigger mode input string.")
 
@@ -2101,8 +2118,9 @@ class RSA:
         """
         trig_pos_percent = RSA.check_num(trig_pos_percent)
         trig_pos_percent = RSA.check_range(trig_pos_percent, 1, 99)
+        self.trigger_position_percent = c_double(trig_pos_percent)
         self.err_check(
-            self.rsa.TRIG_SetTriggerPositionPercent(c_double(trig_pos_percent))
+            self.rsa.TRIG_SetTriggerPositionPercent(self.trigger_position_percent)
         )
 
     def TRIG_SetTriggerSource(self, source: str) -> None:
@@ -2124,7 +2142,8 @@ class RSA:
         source = RSA.check_string(source)
         if source in _TRIGGER_SOURCE:
             source_value = _TRIGGER_SOURCE.index(source)
-            self.err_check(self.rsa.TRIG_SetTriggerSource(c_int(source_value)))
+            self.trigger_source = c_int(source_value)
+            self.err_check(self.rsa.TRIG_SetTriggerSource(self.trigger_source))
         else:
             raise RSAError("Invalid trigger source input string.")
 
@@ -2148,7 +2167,8 @@ class RSA:
         transition = RSA.check_string(transition)
         if transition in _TRIGGER_TRANSITION:
             trans_value = _TRIGGER_TRANSITION.index(transition)
-            self.err_check(self.rsa.TRIG_SetTriggerTransition(c_int(trans_value)))
+            self.trigger_transition = c_int(trans_value)
+            self.err_check(self.rsa.TRIG_SetTriggerTransition(self.trigger_transition))
         else:
             raise RSAError("Invalid trigger transition mode input string.")
 
