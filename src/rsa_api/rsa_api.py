@@ -116,8 +116,9 @@ class _IQStreamFileInfo(Structure):
         ("sample0Timestamp", c_uint64),
         ("triggerSampleIndex", c_uint64),
         ("triggerTimestamp", c_uint64),
-        ("acqStatus", c_uint32),
         ("filenames", c_wchar_p),
+        ("acqStatus", c_uint32),
+
     ]
 
 
