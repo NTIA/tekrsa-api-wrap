@@ -563,20 +563,19 @@ class RSA:
             'temperature' (float) : Device temperature when user setting data
                 was created.
         """
+        logger.debug(f"CONFIG_DecodeFreqRefUserSettingString {i_usstr}")
         i_usstr = c_char_p(i_usstr.encode("utf-8"))
         o_fui = _FreqRefUserInfo()
         self.err_check(
             self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
         )
-    #    ("isvalid", c_bool),
-    #    ("dacValue", c_uint32),
-    #    ("datetime", c_char_p),
-    #    (
-    #        "temperature",
-        logger.debug(f"FreqRefUserInfo.isvalid {o_fui.isvalid.value}")
-        logger.debug(f"FreqRefUserInfo.dacValue {o_fui.dacValue.value}")
-        logger.debug(f"FreqRefUserInfo.datetime: {o_fui.datetime.value}")
-        logger.debug(f"FreqRefUserInfo.temperature: {o_fui.temperature.value}")
+        try:
+            logger.debug(f"FreqRefUserInfo.isvalid {o_fui.isvalid.value}")
+            logger.debug(f"FreqRefUserInfo.dacValue {o_fui.dacValue.value}")
+            logger.debug(f"FreqRefUserInfo.datetime: {o_fui.datetime.value}")
+            logger.debug(f"FreqRefUserInfo.temperature: {o_fui.temperature.value}")
+        except:
+            logger.debug("unable to print decoded values")
         # Temperature result in o_fui is always 0.0 due to broken RSA API
         # Therefore, it must be retrieved directly from i_usstr.
         # Strip checksum so temperature can be parsed (checksum has variable digits)
