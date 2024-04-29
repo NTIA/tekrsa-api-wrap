@@ -25,7 +25,7 @@ _API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
 _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
-_DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
+_DEVINFO_MAX_STRLEN = 100  # Datetime substring length in user setting string
 
 # ENUMERATION TUPLES
 
@@ -115,7 +115,7 @@ class _IQStreamFileInfo(Structure):
         ("triggerSampleIndex", c_uint64),
         ("triggerTimestamp", c_uint64),
         ("acqStatus", c_uint32),
-        ("filenames", c_wchar_p),
+        ("filenames", POINTER(c_wchar_p)),
     ]
 
 
