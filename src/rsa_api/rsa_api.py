@@ -125,7 +125,7 @@ class _IQStreamIQInfo(Structure):
     _fields_ = [
         ("timestamp", c_uint64),
         ("triggerCount", c_int),
-        ("triggerIndices", c_int * 100),
+        ("triggerIndices", POINTER(c_int)),
         ("scaleFactor", c_double),
         ("acqStatus", c_uint32),
     ]
@@ -576,17 +576,11 @@ class RSA:
             logger.debug(f"FreqRefUserInfo.temperature: {o_fui.temperature}")
         except Exception as ex:
             logger.debug(f"unable to print decoded values: {ex}")
-        # Temperature result in o_fui is always 0.0 due to broken RSA API
-        # Therefore, it must be retrieved directly from i_usstr.
-        # Strip checksum so temperature can be parsed (checksum has variable digits)
-        i_usstr = i_usstr.value.decode("utf-8").split("*", 1)[0]
-        temperature = float(i_usstr[-5:])
-
         fui = {
             "isvalid": o_fui.isvalid,
             "dacValue": o_fui.dacValue,
             "datetime": o_fui.datetime.decode("utf-8"),
-            "temperature": temperature,
+            "temperature": o_fui.temperature,
         }
         return fui
 
