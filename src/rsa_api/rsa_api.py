@@ -2291,7 +2291,7 @@ class RSA:
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
             logger.debug(f"Status: {file_info.acqStatus}")
-            logger.debug(f"Filename: {file_info.filenames.contents.decode('utf-8', 'surrogatepass')}")
+            logger.debug(f"Filename: {file_info.filenames.contents.value.decode('utf-8', 'surrogatepass')}")
 
             iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
 
