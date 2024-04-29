@@ -1473,7 +1473,14 @@ class RSA:
         self.err_check(
             self.rsa.IQSTREAM_GetIQData(byref(c_iqdata), byref(iqlen), byref(iqinfo))
         )
-
+        try:
+            logger.debug(f"IQStreamIQInfo.timestamp: {iqinfo.timestamp}")
+            logger.debug(f"IQStreamIQInfo.triggerCount: {iqinfo.triggerCount}")
+            logger.debug(f"IQStreamIQInfo.triggerIndices: {iqinfo.triggerIndices.content}")
+            logger.debug(f"IQStreamIQInfo.timestamp: {iqinfo.scaleFactor}")
+            logger.debug(f"IQStreamIQInfo.timestamp: {iqinfo.acqStatus}")
+        except Exception as ex:
+            logger.debug(f"unable to log IQStreamIQInfo: {ex}")
         del c_iqdata
         return iqdata, iqlen.value, iqinfo
 
