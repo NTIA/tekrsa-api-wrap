@@ -11,7 +11,7 @@ from time import sleep
 from typing import Any, Tuple, Union
 
 import numpy as np
-
+import logging
 # GLOBAL CONSTANTS
 
 _MAX_NUM_DEVICES = 10  # Max num. of devices that could be found
@@ -48,6 +48,8 @@ _SPECTRUM_WINDOWS = (
 _TRIGGER_MODE = ("freerun", "triggered")
 _TRIGGER_SOURCE = ("External", "IFPowerLevel")
 _TRIGGER_TRANSITION = ("LH", "HL", "Either")
+
+logger = logging.getLogger(__name__)
 
 # CUSTOM DATA STRUCTURES
 
@@ -144,17 +146,21 @@ class RSA:
         """Load the RSA USB Driver"""
         # Param. 'so_dir' is the directory containing libRSA_API.so and
         # libcyusb_shared.so.
-        self.trigger_source = None
-        self.trigger_position_percent = None
-        self.trigger_mode = None
+        self.enable_auto_attenuation = c_bool()
+        self.trigger_source =  c_int()
+        self.trigger_position_percent = c_double()
+        self.trigger_mode = c_int()
         self.spectrum_settings = None
         self.disk_file_length = None
-        self.frequency_reference_source = None
-        self.enable_preamp = None
+        self.frequency_reference_source = c_int()
+        self.enable_preamp = c_bool()
         self.user_frequency_reference = None
-        self.enable_external_reference = None
-        self.center_frequency = None
-        self.ref_level = None
+        self.enable_external_reference = c_bool()
+        self.external_reference_frequency = c_double()
+        self.center_frequency = c_double()
+        self.max_center_frequency = c_double()
+        self.min_center_frequency = c_double()
+        self.ref_level = c_double()
         self.trigger_level = None
         self.trace_enable = None
         self.det_val = None
@@ -169,16 +175,23 @@ class RSA:
         self.disk_filename_base = None
         self.acq_bandwidth = None
         self.record_length = None
-        self.iq_bandwidth = None
-        self.min_iq_bandwidth = None
-        self.max_iq_bandwidth = None
+        self.iq_bandwidth =  c_double()
+        self.min_iq_bandwidth =  c_double()
+        self.max_iq_bandwidth =  c_double()
         self.rf_attenuator = None
         self.out_trace_points = c_int()
+        self.alignment_needed = c_bool()
+        self.warmed_up = c_bool()
+        self.is_complete = c_bool()
+        self.is_writing = c_bool()
         self.rtld_lazy = 0x0001
         self.lazy_load = self.rtld_lazy | RTLD_GLOBAL
         self.rsa = CDLL(join(abspath(so_dir), "libRSA_API.so"), self.lazy_load)
+
         self.usb_api = CDLL(join(abspath(so_dir), "libcyusb_shared.so"), self.lazy_load)
 
+    def set_argtypes_restypes(self):
+        pass
     """ ERROR HANDLING """
 
     class ReturnStatus(Enum):
@@ -411,9 +424,8 @@ class RSA:
         bool
             True indicates an alignment is needed, False for not needed.
         """
-        needed = c_bool()
-        self.err_check(self.rsa.ALIGN_GetAlignmentNeeded(byref(needed)))
-        return needed.value
+        self.err_check(self.rsa.ALIGN_GetAlignmentNeeded(byref(self.alignment_needed)))
+        return self.alignment_needed.value
 
     def ALIGN_GetWarmupStatus(self) -> bool:
         """
@@ -425,9 +437,8 @@ class RSA:
             True indicates device warm-up interval reached.
             False indicates warm-up has not been reached
         """
-        warmed_up = c_bool()
-        self.err_check(self.rsa.ALIGN_GetWarmupStatus(byref(warmed_up)))
-        return warmed_up.value
+        self.err_check(self.rsa.ALIGN_GetWarmupStatus(byref(self.warmed_up)))
+        return self.warmed_up.value
 
     def ALIGN_RunAlignment(self) -> None:
         """Run the device alignment process."""
@@ -440,9 +451,8 @@ class RSA:
 
     def CONFIG_GetCenterFreq(self) -> float:
         """Return the current center frequency in Hz."""
-        cf = c_double()
-        self.err_check(self.rsa.CONFIG_GetCenterFreq(byref(cf)))
-        return cf.value
+        self.err_check(self.rsa.CONFIG_GetCenterFreq(byref(self.center_frequency)))
+        return self.center_frequency.value
 
     def CONFIG_GetExternalRefEnable(self) -> bool:
         """
@@ -453,9 +463,9 @@ class RSA:
         bool
             True means external reference is enabled, False means disabled.
         """
-        ext_ref_en = c_bool()
-        self.err_check(self.rsa.CONFIG_GetExternalRefEnable(byref(ext_ref_en)))
-        return ext_ref_en.value
+
+        self.err_check(self.rsa.CONFIG_GetExternalRefEnable(byref(self.enable_external_reference)))
+        return self.enable_external_reference.value
 
     def CONFIG_GetExternalRefFrequency(self) -> float:
         """
@@ -475,9 +485,8 @@ class RSA:
         if src == _FREQ_REF_SOURCE[0]:
             raise RSAError("External frequency reference not in use.")
         else:
-            ext_freq = c_double()
-            self.err_check(self.rsa.CONFIG_GetExternalRefFrequency(byref(ext_freq)))
-            return ext_freq.value
+            self.err_check(self.rsa.CONFIG_GetExternalRefFrequency(byref(self.external_reference_frequency)))
+            return self.external_reference_frequency.value
 
     def CONFIG_GetFrequencyReferenceSource(self) -> str:
         """
@@ -492,27 +501,24 @@ class RSA:
                 GNSS : Internal GNSS receiver reference
                 USER : Previously set USER setting, or, if none, INTERNAL.
         """
-        src = c_int()
-        self.err_check(self.rsa.CONFIG_GetFrequencyReferenceSource(byref(src)))
-        return _FREQ_REF_SOURCE[src.value]
+
+        self.err_check(self.rsa.CONFIG_GetFrequencyReferenceSource(byref(self.frequency_reference_source)))
+        return _FREQ_REF_SOURCE[self.frequency_reference_source.value]
 
     def CONFIG_GetMaxCenterFreq(self) -> float:
         """Return the maximum center frequency in Hz."""
-        max_cf = c_double()
-        self.err_check(self.rsa.CONFIG_GetMaxCenterFreq(byref(max_cf)))
-        return max_cf.value
+        self.err_check(self.rsa.CONFIG_GetMaxCenterFreq(byref(self.max_center_frequency)))
+        return self.max_center_frequency.value
 
     def CONFIG_GetMinCenterFreq(self) -> float:
         """Return the minimum center frequency in Hz."""
-        min_cf = c_double()
-        self.err_check(self.rsa.CONFIG_GetMinCenterFreq(byref(min_cf)))
-        return min_cf.value
+        self.err_check(self.rsa.CONFIG_GetMinCenterFreq(byref(self.min_center_frequency)))
+        return self.min_center_frequency.value
 
     def CONFIG_GetReferenceLevel(self) -> float:
         """Return the current reference level, measured in dBm."""
-        ref_level = c_double()
-        self.err_check(self.rsa.CONFIG_GetReferenceLevel(byref(ref_level)))
-        return ref_level.value
+        self.err_check(self.rsa.CONFIG_GetReferenceLevel(byref(self.ref_level)))
+        return self.ref_level.value
 
     def CONFIG_Preset(self) -> None:
         """
@@ -690,9 +696,9 @@ class RSA:
             True indicates that auto-attenuation operation is enabled.
             False indicated it is disabled.
         """
-        enable = c_bool()
-        self.err_check(self.rsa.CONFIG_GetAutoAttenuationEnable(byref(enable)))
-        return enable.value
+
+        self.err_check(self.rsa.CONFIG_GetAutoAttenuationEnable(byref(self.enable_auto_attenuation)))
+        return self.enable_auto_attenuation.value
 
     def CONFIG_SetAutoAttenuationEnable(self, enable: bool) -> None:
         """
@@ -707,8 +713,8 @@ class RSA:
         """
         enable = RSA.check_bool(enable)
         self.rsa.DEVICE_Stop()
-        self.enable_auto_attenation = c_bool(enable)
-        self.err_check(self.rsa.CONFIG_SetAutoAttenuationEnable(self.enable_auto_attenation))
+        self.enable_auto_attenuation = c_bool(enable)
+        self.err_check(self.rsa.CONFIG_SetAutoAttenuationEnable(self.enable_auto_attenuation))
         self.rsa.DEVICE_Run()
 
     def CONFIG_GetRFPreampEnable(self) -> bool:
@@ -721,9 +727,8 @@ class RSA:
             True indicates the RF Preamplifier is enabled. False indicates
             it is disabled.
         """
-        enable = c_bool()
-        self.err_check(self.rsa.CONFIG_GetRFPreampEnable(byref(enable)))
-        return enable.value
+        self.err_check(self.rsa.CONFIG_GetRFPreampEnable(byref(self.enable_preamp)))
+        return self.enable_preamp.value
 
     def CONFIG_SetRFPreampEnable(self, enable: bool) -> None:
         """
@@ -1094,9 +1099,8 @@ class RSA:
         float
             The IQ bandwidth value.
         """
-        iq_bandwidth = c_double()
-        self.err_check(self.rsa.IQBLK_GetIQBandwidth(byref(iq_bandwidth)))
-        return iq_bandwidth.value
+        self.err_check(self.rsa.IQBLK_GetIQBandwidth(byref(self.iq_bandwidth)))
+        return self.iq_bandwidth.value
 
     def IQBLK_GetIQData(self, req_length: int) -> np.ndarray:
         """
@@ -1406,14 +1410,12 @@ class RSA:
         bool: isWriting
             Whether the IQ stream processing has started writing to file.
         """
-        is_complete = c_bool()
-        is_writing = c_bool()
         self.err_check(
             self.rsa.IQSTREAM_GetDiskFileWriteStatus(
-                byref(is_complete), byref(is_writing)
+                byref(self.is_complete), byref(self.is_writing)
             )
         )
-        return is_complete.value, is_writing.value
+        return self.is_complete.value, self.is_writing.value
 
     def IQSTREAM_GetEnable(self) -> bool:
         """
@@ -1534,6 +1536,7 @@ class RSA:
         """
         filename_base = RSA.check_string(filename_base)
         self.disk_filename_base = c_wchar_p(filename_base)
+        logger.debug(f"Setting IQ filename: {self.disk_filename_base}")
         self.err_check(self.rsa.IQSTREAM_SetDiskFilenameBaseW(self.disk_filename_base))
 
     def IQSTREAM_SetDiskFilenameSuffix(self, suffix_ctl: int) -> None:
@@ -1608,9 +1611,12 @@ class RSA:
                     + " single precision data type."
                 )
             else:
-                self.destination = c_int(_IQS_OUT_DEST.index(dest))
-                self.datatype = c_int(_IQS_OUT_DTYPE.index(dtype))
-            
+                dest_index = _IQS_OUT_DEST.index(dest)
+                logger.debug(f"Setting IQ output destingation to {dest} at index {dest_index}")
+                self.destination = c_int(dest_index)
+                data_type_index = _IQS_OUT_DTYPE.index(dtype)
+                logger.debug(f"Setting IQ data type to {dtype} at index {data_type_index}")
+                self.datatype = c_int()
                 self.err_check(self.rsa.IQSTREAM_SetOutputConfiguration(self.destination, self.datatype))
         else:
             raise RSAError("Input data type or destination string invalid.")
@@ -1809,7 +1815,7 @@ class RSA:
                 byref(self.out_trace_points),
             )
         )
-        return np.ctypeslib.as_array(trace_data), out_trace_points.value
+        return np.ctypeslib.as_array(self.trace_data), self.out_trace_points.value
 
     def SPECTRUM_GetTraceInfo(self) -> dict:
         """
@@ -2020,9 +2026,8 @@ class RSA:
         string
             Either "freeRun" or "triggered".
         """
-        mode = c_int()
-        self.err_check(self.rsa.TRIG_GetTriggerMode(byref(mode)))
-        return _TRIGGER_MODE[mode.value]
+        self.err_check(self.rsa.TRIG_GetTriggerMode(byref(self.trigger_mode)))
+        return _TRIGGER_MODE[self.trigger_mode.value]
 
     def TRIG_GetTriggerPositionPercent(self) -> float:
         """
@@ -2033,9 +2038,8 @@ class RSA:
         float
             Trigger position percent value when the method completes.
         """
-        trig_pos_percent = c_double()
-        self.err_check(self.rsa.TRIG_GetTriggerPositionPercent(byref(trig_pos_percent)))
-        return trig_pos_percent.value
+        self.err_check(self.rsa.TRIG_GetTriggerPositionPercent(byref(self.trigger_position_percent)))
+        return self.trigger_position_percent.value
 
     def TRIG_GetTriggerSource(self) -> str:
         """
@@ -2048,9 +2052,8 @@ class RSA:
                 External : External source.
                 IFPowerLevel : IF power level source.
         """
-        source = c_int()
-        self.err_check(self.rsa.TRIG_GetTriggerSource(byref(source)))
-        return _TRIGGER_SOURCE[source.value]
+        self.err_check(self.rsa.TRIG_GetTriggerSource(byref(self.trigger_source)))
+        return _TRIGGER_SOURCE[self.trigger_source.value]
 
     def TRIG_GetTriggerTransition(self) -> str:
         """
@@ -2271,22 +2274,28 @@ class RSA:
             # Collect data
             self.DEVICE_Run()
             self.IQSTREAM_Start()
-            sleep((duration_msec + 1)/1000)
+            sleep_time = (duration_msec + 1)/1000
+            logger.debug(f"Started IQ stream. Sleeping for {sleep_time}")
+            sleep(sleep_time)
             complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
+            logger.debug(f"File write complete: {complete}")
             while not complete:
+                logger.debug(f"Sleeping for {sleep_time_sec}")
                 sleep(sleep_time_sec)
                 complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
+                logger.debug(f"File write complete: {complete}")
+            logger.debug("Stopping stream.")
             self.IQSTREAM_Stop()
+            logger.debug("Stopping device.")
             self.DEVICE_Stop()
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
+
             iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
-
-
 
             # Read data back in from file
             with open(filename_base + ".siqd", "rb") as f:
-                d = np.copy(np.fromfile(f, dtype=np.float32))
+                d = np.fromfile(f, dtype=np.float32)
 
         # Deinterleave I and Q
         i = d[0:-1:2]
