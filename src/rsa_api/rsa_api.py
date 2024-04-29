@@ -117,7 +117,7 @@ class _IQStreamFileInfo(Structure):
         ("triggerSampleIndex", c_uint64),
         ("triggerTimestamp", c_uint64),
         ("acqStatus", c_uint32),
-        ("filenames", c_wchar_p),
+        ("filenames", POINTER(c_wchar_p)),
     ]
 
 
@@ -543,7 +543,7 @@ class RSA:
         cf = RSA.check_range(
             cf, self.CONFIG_GetMinCenterFreq(), self.CONFIG_GetMaxCenterFreq()
         )
-        self.center_frequency = c_double(cf)
+        self.center_frequency.value = cf
         self.err_check(self.rsa.CONFIG_SetCenterFreq(self.center_frequency))
 
     def CONFIG_DecodeFreqRefUserSettingString(self, i_usstr: str) -> dict:
@@ -2290,8 +2290,9 @@ class RSA:
             self.DEVICE_Stop()
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
-            logger.debug(f"Filename: {file_info.filenames.value.decode('utf-8', 'surrogatepass')}")
             logger.debug(f"Status: {file_info.acqStatus}")
+            logger.debug(f"Filename: {file_info.filenames.contents.decode('utf-8', 'surrogatepass')}")
+
             iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
 
             # Read data back in from file
