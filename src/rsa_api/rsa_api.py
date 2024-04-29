@@ -570,12 +570,12 @@ class RSA:
             self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
         )
         try:
-            logger.debug(f"FreqRefUserInfo.isvalid {o_fui.isvalid.value}")
-            logger.debug(f"FreqRefUserInfo.dacValue {o_fui.dacValue.value}")
-            logger.debug(f"FreqRefUserInfo.datetime: {o_fui.datetime.value}")
-            logger.debug(f"FreqRefUserInfo.temperature: {o_fui.temperature.value}")
-        except:
-            logger.debug("unable to print decoded values")
+            logger.debug(f"FreqRefUserInfo.isvalid {o_fui.isvalid}")
+            logger.debug(f"FreqRefUserInfo.dacValue {o_fui.dacValue}")
+            logger.debug(f"FreqRefUserInfo.datetime: {o_fui.datetime}")
+            logger.debug(f"FreqRefUserInfo.temperature: {o_fui.temperature}")
+        except Exception as ex:
+            logger.debug(f"unable to print decoded values: {ex}")
         # Temperature result in o_fui is always 0.0 due to broken RSA API
         # Therefore, it must be retrieved directly from i_usstr.
         # Strip checksum so temperature can be parsed (checksum has variable digits)
