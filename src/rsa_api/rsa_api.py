@@ -2291,7 +2291,8 @@ class RSA:
             self.DEVICE_Stop()
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
-
+            logger.debug(f"Filename: {file_info.filenames.value}")
+            logger.debug(f"Status: {file_info.acqStatus}")
             iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
 
             # Read data back in from file
