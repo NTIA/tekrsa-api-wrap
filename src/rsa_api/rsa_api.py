@@ -25,7 +25,7 @@ _API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
 _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
-_DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
+_DEVINFO_MAX_STRLEN = 100  # Datetime substring length in user setting string
 
 # ENUMERATION TUPLES
 
