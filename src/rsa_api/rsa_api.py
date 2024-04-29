@@ -25,7 +25,7 @@ _API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
 _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
-_DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
+_DEVINFO_MAX_STRLEN = 100  # Datetime substring length in user setting string
 
 # ENUMERATION TUPLES
 
@@ -58,7 +58,7 @@ class _FreqRefUserInfo(Structure):
     _fields_ = [
         ("isvalid", c_bool),
         ("dacValue", c_uint32),
-        ("datetime", c_char * _DEVINFO_MAX_STRLEN),
+        ("datetime",  c_char * _DEVINFO_MAX_STRLEN),
         (
             "temperature",
             c_double,
@@ -125,7 +125,7 @@ class _IQStreamIQInfo(Structure):
     _fields_ = [
         ("timestamp", c_uint64),
         ("triggerCount", c_int),
-        ("triggerIndices", POINTER(c_int)),
+        ("triggerIndices", c_int * 100),
         ("scaleFactor", c_double),
         ("acqStatus", c_uint32),
     ]
@@ -151,7 +151,7 @@ class RSA:
         self.trigger_position_percent = c_double()
         self.trigger_mode = c_int()
         self.spectrum_settings = None
-        self.disk_file_length = None
+        self.disk_file_length = c_int()
         self.frequency_reference_source = c_int()
         self.enable_preamp = c_bool()
         self.user_frequency_reference = None
@@ -168,17 +168,17 @@ class RSA:
         self.enable = None
         self.max_trace_points = None
         self.trace_data = None
-        self.datatype = None
-        self.destination = None
+        self.datatype = c_int()
+        self.destination = c_int()
         self.iq_buffer_size = None
-        self.filename_suffix = None
-        self.disk_filename_base = None
-        self.acq_bandwidth = None
+        self.filename_suffix = c_int()
+        self.disk_filename_base = c_wchar_p()
+        self.acq_bandwidth = c_double()
         self.record_length = None
         self.iq_bandwidth =  c_double()
-        self.min_iq_bandwidth =  c_double()
-        self.max_iq_bandwidth =  c_double()
-        self.rf_attenuator = None
+        self.min_iq_bandwidth = c_double()
+        self.max_iq_bandwidth = c_double()
+        self.rf_attenuator = c_double()
         self.out_trace_points = c_int()
         self.alignment_needed = c_bool()
         self.warmed_up = c_bool()
@@ -568,6 +568,15 @@ class RSA:
         self.err_check(
             self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
         )
+    #    ("isvalid", c_bool),
+    #    ("dacValue", c_uint32),
+    #    ("datetime", c_char_p),
+    #    (
+    #        "temperature",
+        logger.debug(f"FreqRefUserInfo.isvalid {o_fui.isvalid.value}")
+        logger.debug(f"FreqRefUserInfo.dacValue {o_fui.dacValue.value}")
+        logger.debug(f"FreqRefUserInfo.datetime: {o_fui.datetime.value}")
+        logger.debug(f"FreqRefUserInfo.temperature: {o_fui.temperature.value}")
         # Temperature result in o_fui is always 0.0 due to broken RSA API
         # Therefore, it must be retrieved directly from i_usstr.
         # Strip checksum so temperature can be parsed (checksum has variable digits)
@@ -618,7 +627,7 @@ class RSA:
             if src == "GNSS" and self.DEVICE_GetNomenclature() in ["RSA306", "RSA306B"]:
                 raise RSAError("RSA 300 series device does not support GNSS reference.")
             else:
-                self.frequency_reference_source = c_int(_FREQ_REF_SOURCE.index(src))
+                self.frequency_reference_source.value = _FREQ_REF_SOURCE.index(src)
                 self.err_check(self.rsa.CONFIG_SetFrequencyReferenceSource(self.frequency_reference_source))
         else:
             raise RSAError("Input does not match a valid setting.")
@@ -683,7 +692,7 @@ class RSA:
         """
         ref_level = RSA.check_num(ref_level)
         ref_level = RSA.check_range(ref_level, -130, 30)
-        self.ref_level = c_double(ref_level)
+        self.ref_level.value = ref_level
         self.err_check(self.rsa.CONFIG_SetReferenceLevel(self.ref_level))
 
     def CONFIG_GetAutoAttenuationEnable(self) -> bool:
@@ -743,7 +752,7 @@ class RSA:
         """
         enable = RSA.check_bool(enable)
         self.rsa.DEVICE_Stop()
-        self.enable_preamp = c_bool(enable)
+        self.enable_preamp.value = enable
         self.err_check(self.rsa.CONFIG_SetRFPreampEnable(self.enable_preamp))
         self.rsa.DEVICE_Run()
 
@@ -775,7 +784,7 @@ class RSA:
         value = RSA.check_num(value)
         value = RSA.check_range(value, -51, 0)
         self.rsa.DEVICE_Stop()
-        self.rf_attenuator = c_double(value)
+        self.rf_attenuator.value = value
         self.err_check(self.rsa.CONFIG_SetRFAttenuator(self.rf_attenuator))
         self.rsa.DEVICE_Run()
 
@@ -1507,7 +1516,7 @@ class RSA:
             self.IQSTREAM_GetMaxAcqBandwidth(),
         )
         self.rsa.DEVICE_Stop()
-        self.acq_bandwidth = c_double(bw_hz_req)
+        self.acq_bandwidth.value = bw_hz_req
         self.err_check(self.rsa.IQSTREAM_SetAcqBandwidth(self.acq_bandwidth))
         self.rsa.DEVICE_Run()
 
@@ -1522,7 +1531,7 @@ class RSA:
         """
         msec = RSA.check_int(msec)
         msec = RSA.check_range(msec, 0, float("inf"))
-        self.disk_file_length = c_int(msec)
+        self.disk_file_length.value = msec
         self.err_check(self.rsa.IQSTREAM_SetDiskFileLength(self.disk_file_length))
 
     def IQSTREAM_SetDiskFilenameBase(self, filename_base: str) -> None:
@@ -1535,8 +1544,8 @@ class RSA:
             Base filename for file output.
         """
         filename_base = RSA.check_string(filename_base)
-        self.disk_filename_base = c_wchar_p(filename_base)
-        logger.debug(f"Setting IQ filename: {self.disk_filename_base}")
+        self.disk_filename_base.value =filename_base
+        logger.debug(f"Setting IQ filename: {self.disk_filename_base.value}")
         self.err_check(self.rsa.IQSTREAM_SetDiskFilenameBaseW(self.disk_filename_base))
 
     def IQSTREAM_SetDiskFilenameSuffix(self, suffix_ctl: int) -> None:
@@ -1550,7 +1559,8 @@ class RSA:
         """
         suffix_ctl = RSA.check_int(suffix_ctl)
         suffix_ctl = RSA.check_range(suffix_ctl, -2, float("inf"))
-        self.filename_suffix = c_int(suffix_ctl)
+        self.filename_suffix.value = suffix_ctl
+        logger.debug(f"Set diskfilename suffix:{suffix_ctl}")
         self.err_check(self.rsa.IQSTREAM_SetDiskFilenameSuffix(self.filename_suffix))
 
     def IQSTREAM_SetIQDataBufferSize(self, req_size: int) -> None:
@@ -1613,10 +1623,10 @@ class RSA:
             else:
                 dest_index = _IQS_OUT_DEST.index(dest)
                 logger.debug(f"Setting IQ output destingation to {dest} at index {dest_index}")
-                self.destination = c_int(dest_index)
+                self.destination.value = dest_index
                 data_type_index = _IQS_OUT_DTYPE.index(dtype)
                 logger.debug(f"Setting IQ data type to {dtype} at index {data_type_index}")
-                self.datatype = c_int()
+                self.datatype.value = data_type_index
                 self.err_check(self.rsa.IQSTREAM_SetOutputConfiguration(self.destination, self.datatype))
         else:
             raise RSAError("Input data type or destination string invalid.")
