@@ -162,6 +162,8 @@ class RSA:
         errorBootLoaderNotRunning = 103
         errorTooManyBootLoadersConnected = 104
         errorRebootFailure = 105
+        errorGNSSNotInstalled = 106
+        errorGNSSNotEnabled = 107
 
         # POST
         errorPOSTFailureFPGALoad = 201
@@ -170,11 +172,13 @@ class RSA:
         errorPOSTFailureGPIF = 204
         errorPOSTFailureUsbSpeed = 205
         errorPOSTDiagFailure = 206
+        errorPOSTFailure3P3VSense = 207
+        errorPOSTLinkFailure = 208
 
         # General Msmt
         errorBufferAllocFailed = 301
         errorParameter = 302
-        errorDataNotReady = 304
+        errorDataNotReady = 303
 
         # Spectrum
         errorParameterTraceLength = 1101
@@ -193,11 +197,14 @@ class RSA:
         errorStreamingFastForwardTimeInvalid = 1208
         errorStreamingInvalidParameters = 1209
         errorStreamingEOF = 1210
+        errorStreamingIfReadTimeout = 1211
+        errorStreamingIfNotEnabled = 1212
 
         # IQ streaming
         errorIQStreamInvalidFileDataType = 1301
         errorIQStreamFileOpenFailed = 1302
         errorIQStreamBandwidthOutOfRange = 1303
+        errorIQStreamingNotEnabled = 1304
 
         # -----------------
         # Internal errors
@@ -215,12 +222,14 @@ class RSA:
         errorLogFailure = 3011
         errorRegisterIO = 3012
         errorFileRead = 3013
+        errorConsumerNotActive = 3014
 
         errorDisconnectedDeviceRemoved = 3101
         errorDisconnectedDeviceNodeChangedAndRemoved = 3102
         errorDisconnectedTimeoutWaitingForADcData = 3103
         errorDisconnectedIOBeginTransfer = 3104
         errorOperationNotSupportedInSimMode = 3015
+        errorDisconnectedIOFinishTransfer = 3016
 
         errorFPGAConfigureFailure = 3201
         errorCalCWNormFailure = 3202
@@ -250,7 +259,7 @@ class RSA:
         errorCalConfigInvalid = 3309
 
         # flash
-        errorFlashFileSystemUnexpectedSize = (3401,)
+        errorFlashFileSystemUnexpectedSize = 3401
         errorFlashFileSystemNotMounted = 3402
         errorFlashFileSystemOutOfRange = 3403
         errorFlashFileSystemIndexNotFound = 3404
@@ -271,9 +280,16 @@ class RSA:
         errorFlashReadFailure = 3419
         errorFlashFileSystemBadArgument = 3420
         errorFlashFileSystemCreateFile = 3421
+        errorARchiveDirectoryNotFound = 3422
+        errorArchiveDirectoryNotWriteable = 3423
+        errorArchiveWriteFile = 3424
+        errorArchiveGenerateFilename = 3425
+        errorArchiveBoost = 3426
+        errorArchiveStd = 3427
+        errorArchiveGeneric = 3428
 
         # Aux monitoring
-        errorMonitoringNotSupported = (3501,)
+        errorMonitoringNotSupported = 3501
         errorAuxDataNotAvailable = 3502
 
         # battery
@@ -297,6 +313,20 @@ class RSA:
         errorInvalidCalConstant = 3903
         errorNormalizationCacheInvalid = 3904
         errorInvalidAlignmentCache = 3905
+        errorLockExtRefAfterAlignment = 3906
+
+        # Triggering
+        errorTriggerSystem = 4000
+
+        # VNA
+        errorVNAUnsupportedConfiguration = 4100
+
+        # MFC
+        errorMFCHWNotPresent = 4200
+        errorMFCWriteCalFile = 4201
+        errorMFCReadCalFile = 4202
+        errorMFCFileFormatError = 4203
+        errorMFCFlashCorruptDataError = 4204
 
         # acq status
         errorADCOverrange = 9000  # must not change the location of these error codes without coordinating with MFG TEST
