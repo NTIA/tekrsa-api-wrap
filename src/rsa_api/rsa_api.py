@@ -3,6 +3,7 @@ Written for Tektronix RSA API for Linux v1.0.0014
 Refer to the RSA API Programming Reference Manual for details
 on any functions implemented from this module.
 """
+import logging
 import tempfile
 from ctypes import *
 from enum import Enum
@@ -12,20 +13,16 @@ from typing import Any, Tuple, Union
 
 import numpy as np
 
+logger = logging.getLogger(__name__)
 # GLOBAL CONSTANTS
 
-_MAX_NUM_DEVICES = 10  # Max num. of devices that could be found
-_MAX_SERIAL_STRLEN = 8  # Bytes allocated for serial number string
-_MAX_DEVTYPE_STRLEN = 8  # Bytes allocated for device type string
-_FPGA_VERSION_STRLEN = 6  # Bytes allocated for FPGA version number string
-_FW_VERSION_STRLEN = 6  # Bytes allocated for FW version number string
-_HW_VERSION_STRLEN = 4  # Bytes allocated for HW version number string
-_NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
-_API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
+_DEVSRCH_MAX_NUM_DEVICES = 20  # Max num. of devices that could be found
+_DEVSRCH_SERIAL_MAX_STRLEN = 100  # Char array size allocated for serial number string
+_DEVSRCH_TYPE_MAX_STRLEN = 20  # Char array size allocated for device type string
+_DEVINFO_MAX_STRLEN = 100  # Char array max size to allocate for DEVICE_Get* functions
 _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
-_DEVINFO_MAX_STRLEN = 19  # Datetime substring length in user setting string
 
 # ENUMERATION TUPLES
 
@@ -52,15 +49,23 @@ _TRIGGER_TRANSITION = ("LH", "HL", "Either")
 # CUSTOM DATA STRUCTURES
 
 
+class _DeviceInfo(Structure):
+    _fields_ = [
+        ("nomenclature", c_char * _DEVINFO_MAX_STRLEN),
+        ("serialNum", c_char * _DEVINFO_MAX_STRLEN),
+        ("apiVersion", c_char * _DEVINFO_MAX_STRLEN),
+        ("fwVersion", c_char * _DEVINFO_MAX_STRLEN),
+        ("fpgaVersion", c_char * _DEVINFO_MAX_STRLEN),
+        ("hwVersion", c_char * _DEVINFO_MAX_STRLEN),
+    ]
+
+
 class _FreqRefUserInfo(Structure):
     _fields_ = [
         ("isvalid", c_bool),
         ("dacValue", c_uint32),
         ("datetime", c_char * _DEVINFO_MAX_STRLEN),
-        (
-            "temperature",
-            c_double,
-        ),  # Documentation indicates this field exists. Testing indicates otherwise.
+        ("temperature", c_double),
     ]
 
 
@@ -73,8 +78,8 @@ class _SpectrumLimits(Structure):
         ("maxVBW", c_double),
         ("minVBW", c_double),
         ("maxTraceLength", c_int),  # Incorrectly documented as a double
-        ("minTraceLength", c_int),
-    ]  # Incorrectly documented as a double
+        ("minTraceLength", c_int),  # Incorrectly documented as a double
+    ]
 
 
 class _SpectrumSettings(Structure):
@@ -83,9 +88,9 @@ class _SpectrumSettings(Structure):
         ("rbw", c_double),
         ("enableVBW", c_bool),
         ("vbw", c_double),
-        ("traceLength", c_int),
-        ("window", c_int),
-        ("verticalUnit", c_int),
+        ("traceLength", c_int),  # Must be an odd number
+        ("window", c_int),  # Really a SpectrumWindows enum value
+        ("verticalUnit", c_int),  # Really a SpectrumVerticalUnits enum value
         ("actualStartFreq", c_double),
         ("actualStopFreq", c_double),
         ("actualFreqStepSize", c_double),
@@ -96,7 +101,10 @@ class _SpectrumSettings(Structure):
 
 
 class _SpectrumTraceInfo(Structure):
-    _fields_ = [("timestamp", c_int64), ("acqDataStatus", c_uint16)]
+    _fields_ = [
+        ("timestamp", c_uint64),
+        ("acqDataStatus", c_uint16),
+    ]
 
 
 class _IQBlkAcqInfo(Structure):
@@ -108,18 +116,18 @@ class _IQBlkAcqInfo(Structure):
     ]
 
 
-class _IQStreamFileInfo(Structure):
+class _IQStreamFileInfo(Structure):  # "IQSTRMFILEINFO" in RSA_API.h
     _fields_ = [
         ("numberSamples", c_uint64),
         ("sample0Timestamp", c_uint64),
         ("triggerSampleIndex", c_uint64),
         ("triggerTimestamp", c_uint64),
         ("acqStatus", c_uint32),
-        ("filenames", c_wchar_p),
+        ("filenames", POINTER(c_wchar_p)),
     ]
 
 
-class _IQStreamIQInfo(Structure):
+class _IQStreamIQInfo(Structure):  # "IQSTRMIQINFO" in RSA_API.h
     _fields_ = [
         ("timestamp", c_uint64),
         ("triggerCount", c_int),
@@ -160,6 +168,8 @@ class RSA:
         errorBootLoaderNotRunning = 103
         errorTooManyBootLoadersConnected = 104
         errorRebootFailure = 105
+        errorGNSSNotInstalled = 106
+        errorGNSSNotEnabled = 107
 
         # POST
         errorPOSTFailureFPGALoad = 201
@@ -168,11 +178,13 @@ class RSA:
         errorPOSTFailureGPIF = 204
         errorPOSTFailureUsbSpeed = 205
         errorPOSTDiagFailure = 206
+        errorPOSTFailure3P3VSense = 207
+        errorPOSTLinkFailure = 208
 
         # General Msmt
         errorBufferAllocFailed = 301
         errorParameter = 302
-        errorDataNotReady = 304
+        errorDataNotReady = 303
 
         # Spectrum
         errorParameterTraceLength = 1101
@@ -191,11 +203,14 @@ class RSA:
         errorStreamingFastForwardTimeInvalid = 1208
         errorStreamingInvalidParameters = 1209
         errorStreamingEOF = 1210
+        errorStreamingIfReadTimeout = 1211
+        errorStreamingIfNotEnabled = 1212
 
         # IQ streaming
         errorIQStreamInvalidFileDataType = 1301
         errorIQStreamFileOpenFailed = 1302
         errorIQStreamBandwidthOutOfRange = 1303
+        errorIQStreamingNotEnabled = 1304
 
         # -----------------
         # Internal errors
@@ -213,12 +228,14 @@ class RSA:
         errorLogFailure = 3011
         errorRegisterIO = 3012
         errorFileRead = 3013
+        errorConsumerNotActive = 3014
 
         errorDisconnectedDeviceRemoved = 3101
         errorDisconnectedDeviceNodeChangedAndRemoved = 3102
         errorDisconnectedTimeoutWaitingForADcData = 3103
         errorDisconnectedIOBeginTransfer = 3104
         errorOperationNotSupportedInSimMode = 3015
+        errorDisconnectedIOFinishTransfer = 3016
 
         errorFPGAConfigureFailure = 3201
         errorCalCWNormFailure = 3202
@@ -248,7 +265,7 @@ class RSA:
         errorCalConfigInvalid = 3309
 
         # flash
-        errorFlashFileSystemUnexpectedSize = (3401,)
+        errorFlashFileSystemUnexpectedSize = 3401
         errorFlashFileSystemNotMounted = 3402
         errorFlashFileSystemOutOfRange = 3403
         errorFlashFileSystemIndexNotFound = 3404
@@ -269,9 +286,16 @@ class RSA:
         errorFlashReadFailure = 3419
         errorFlashFileSystemBadArgument = 3420
         errorFlashFileSystemCreateFile = 3421
+        errorARchiveDirectoryNotFound = 3422
+        errorArchiveDirectoryNotWriteable = 3423
+        errorArchiveWriteFile = 3424
+        errorArchiveGenerateFilename = 3425
+        errorArchiveBoost = 3426
+        errorArchiveStd = 3427
+        errorArchiveGeneric = 3428
 
         # Aux monitoring
-        errorMonitoringNotSupported = (3501,)
+        errorMonitoringNotSupported = 3501
         errorAuxDataNotAvailable = 3502
 
         # battery
@@ -295,6 +319,20 @@ class RSA:
         errorInvalidCalConstant = 3903
         errorNormalizationCacheInvalid = 3904
         errorInvalidAlignmentCache = 3905
+        errorLockExtRefAfterAlignment = 3906
+
+        # Triggering
+        errorTriggerSystem = 4000
+
+        # VNA
+        errorVNAUnsupportedConfiguration = 4100
+
+        # MFC
+        errorMFCHWNotPresent = 4200
+        errorMFCWriteCalFile = 4201
+        errorMFCReadCalFile = 4202
+        errorMFCFileFormatError = 4203
+        errorMFCFlashCorruptDataError = 4204
 
         # acq status
         errorADCOverrange = 9000  # must not change the location of these error codes without coordinating with MFG TEST
@@ -530,17 +568,19 @@ class RSA:
         self.err_check(
             self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
         )
-        # Temperature result in o_fui is always 0.0 due to broken RSA API
-        # Therefore, it must be retrieved directly from i_usstr.
-        # Strip checksum so temperature can be parsed (checksum has variable digits)
-        i_usstr = i_usstr.value.decode("utf-8").split("*", 1)[0]
-        temperature = float(i_usstr[-5:])
+        try:
+            logger.debug(f"FreqRefUserInfo.isvalid {o_fui.isvalid}")
+            logger.debug(f"FreqRefUserInfo.dacValue {o_fui.dacValue}")
+            logger.debug(f"FreqRefUserInfo.datetime: {o_fui.datetime}")
+            logger.debug(f"FreqRefUserInfo.temperature: {o_fui.temperature}")
+        except Exception as ex:
+            logger.debug(f"unable to print decoded values: {ex}")
 
         fui = {
             "isvalid": o_fui.isvalid,
             "dacValue": o_fui.dacValue,
             "datetime": o_fui.datetime.decode("utf-8"),
-            "temperature": temperature,
+            "temperature": o_fui.temperature,
         }
         return fui
 
@@ -576,8 +616,9 @@ class RSA:
         """
         src = RSA.check_string(src)
         if src in _FREQ_REF_SOURCE:
-            if src == "GNSS" and self.DEVICE_GetNomenclature() in ["RSA306", "RSA306B"]:
-                raise RSAError("RSA 300 series device does not support GNSS reference.")
+            device_name = self.DEVICE_GetNomenclature()
+            if src == "GNSS" and device_name in ["RSA306", "RSA306B"]:
+                raise RSAError(f"{device_name} device does not support GNSS reference.")
             else:
                 value = c_int(_FREQ_REF_SOURCE.index(src))
                 self.err_check(self.rsa.CONFIG_SetFrequencyReferenceSource(value))
@@ -779,7 +820,7 @@ class RSA:
         string
             The FPGA version number.
         """
-        fpga_version = (c_char * _FPGA_VERSION_STRLEN)()
+        fpga_version = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFPGAVersion(byref(fpga_version)))
         return fpga_version.value.decode("utf-8")
 
@@ -792,7 +833,7 @@ class RSA:
         string
             The firmware version number.
         """
-        fw_version = (c_char * _FW_VERSION_STRLEN)()
+        fw_version = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFWVersion(byref(fw_version)))
         return fw_version.value.decode("utf-8")
 
@@ -805,7 +846,7 @@ class RSA:
         string
             The hardware version number.
         """
-        hw_version = (c_char * _HW_VERSION_STRLEN)()
+        hw_version = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetHWVersion(byref(hw_version)))
         return hw_version.value.decode("utf-8")
 
@@ -818,7 +859,7 @@ class RSA:
         string
             Name of the device.
         """
-        nomenclature = (c_char * _NOMENCLATURE_STRLEN)()
+        nomenclature = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetNomenclature(byref(nomenclature)))
         return nomenclature.value.decode("utf-8")
 
@@ -831,7 +872,7 @@ class RSA:
         string
             Serial number of the device.
         """
-        serial_num = (c_char * _MAX_SERIAL_STRLEN)()
+        serial_num = (c_char * _DEVSRCH_SERIAL_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetSerialNumber(byref(serial_num)))
         return serial_num.value.decode("utf-8")
 
@@ -844,7 +885,7 @@ class RSA:
         string
             The API version number.
         """
-        api_version = (c_char * _API_VERSION_STRLEN)()
+        api_version = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetAPIVersion(byref(api_version)))
         return api_version.value.decode("utf-8")
 
@@ -864,19 +905,15 @@ class RSA:
             Keys: nomenclature, serialNum, fwVersion, fpgaVersion,
                   hwVersion, apiVersion
         """
-        nomenclature = self.DEVICE_GetNomenclature()
-        serial_num = self.DEVICE_GetSerialNumber()
-        fw_version = self.DEVICE_GetFWVersion()
-        fpga_version = self.DEVICE_GetFPGAVersion()
-        hw_version = self.DEVICE_GetHWVersion()
-        api_version = self.DEVICE_GetAPIVersion()
+        dev_info = _DeviceInfo()
+        self.err_check(self.rsa.DEVICE_GetInfo(byref(dev_info)))
         info = {
-            "nomenclature": nomenclature,
-            "serialNum": serial_num,
-            "fwVersion": fw_version,
-            "fpgaVersion": fpga_version,
-            "hwVersion": hw_version,
-            "apiVersion": api_version,
+            "nomenclature": dev_info.nomenclature.decode("utf-8"),
+            "serialNum": dev_info.serialNum.decode("utf-8"),
+            "apiVersion": dev_info.apiVersion.decode("utf-8"),
+            "fwVersion": dev_info.fwVersion.decode("utf-8"),
+            "fpgaVersion": dev_info.fpgaVersion.decode("utf-8"),
+            "hwVersion": dev_info.hwVersion.decode("utf-8"),
         }
         return info
 
@@ -942,9 +979,11 @@ class RSA:
             If no devices are found.
         """
         num_found = c_int()
-        dev_ids = (c_int * _MAX_NUM_DEVICES)()
-        dev_serial = ((c_char * _MAX_NUM_DEVICES) * _MAX_SERIAL_STRLEN)()
-        dev_type = ((c_char * _MAX_NUM_DEVICES) * _MAX_DEVTYPE_STRLEN)()
+        dev_ids = (c_int * _DEVSRCH_MAX_NUM_DEVICES)()
+        dev_serial = (
+            (c_char * _DEVSRCH_MAX_NUM_DEVICES) * _DEVSRCH_SERIAL_MAX_STRLEN
+        )()
+        dev_type = ((c_char * _DEVSRCH_MAX_NUM_DEVICES) * _DEVSRCH_TYPE_MAX_STRLEN)()
 
         self.err_check(
             self.rsa.DEVICE_Search(
@@ -2220,13 +2259,23 @@ class RSA:
 
             self.DEVICE_Run()
             self.IQSTREAM_Start()
+            sleep_time = (duration_msec + 1) / 1000
+            logger.debug(f"Started IQ stream. Sleeping for {sleep_time}")
+            sleep(sleep_time)
+            complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
+            logger.debug(f"File write complete: {complete}")
             while not complete:
+                logger.debug(f"Sleeping for {sleep_time_sec}")
                 sleep(sleep_time_sec)
                 complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
+                logger.debug(f"File write complete: {complete}")
+            logger.debug("Stopping stream.")
             self.IQSTREAM_Stop()
 
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
+            logger.debug(f"Status: {file_info.acqStatus}")
+            logger.debug(f"Filename: {file_info.filenames.contents.value}")
             iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
 
             self.DEVICE_Stop()
@@ -2257,7 +2306,9 @@ class RSA:
     ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
         """
         Retrieve IQ data from device by first writing to a tempfile.
-        Performs device configuration before capturing.
+        Tunes device parameters before recording: center frequency,
+        reference level, and IQ bandwidth. Does not adjust preamp
+        or attenuation settings for RSA500/600 devices.
 
         Parameters
         ----------
@@ -2282,62 +2333,16 @@ class RSA:
             The status code for the IQ capture, as defined in
             the documentation for IQSTREAMFileInfo_StatusParser().
         """
-        # Configuration parameters
-        dest = _IQS_OUT_DEST[3]  # Split SIQ format
-        dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
-        suffix_ctl = -2  # No file suffix
-        filename = "tempIQ"
-        sleep_time_sec = 0.05  # Loop sleep time checking if acquisition complete
+        logger.warning(
+            "IQSTREAM_Tempfile is not recommended! Use IQSTREAM_Tempfile_NoConfig instead."
+        )
+        # Configure the device: tune frequency and
+        self.CONFIG_SetCenterFreq(cf)
+        self.CONFIG_SetReferenceLevel(ref_level)
+        self.IQSTREAM_SetAcqBandwidth(bw)
 
-        # Ensure device is stopped before proceeding
-        self.DEVICE_Stop()
-
-        # Create temp directory and configure/collect data
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            filename_base = tmp_dir + "/" + filename
-
-            # Configure device
-            self.CONFIG_SetCenterFreq(cf)
-            self.CONFIG_SetReferenceLevel(ref_level)
-            self.IQSTREAM_SetAcqBandwidth(bw)
-            self.IQSTREAM_SetOutputConfiguration(dest, dtype)
-            self.IQSTREAM_SetDiskFilenameBase(filename_base)
-            self.IQSTREAM_SetDiskFilenameSuffix(suffix_ctl)
-            self.IQSTREAM_SetDiskFileLength(duration_msec)
-            self.IQSTREAM_ClearAcqStatus()
-            self.DEVICE_PrepareForRun()
-
-            # Collect data
-            complete = False
-
-            self.DEVICE_Run()
-            self.IQSTREAM_Start()
-            while not complete:
-                sleep(sleep_time_sec)
-                complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
-            self.IQSTREAM_Stop()
-
-            # Check acquisition status
-            file_info = self.IQSTREAM_GetDiskFileInfo()
-            iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
-
-            self.DEVICE_Stop()
-
-            # Read data back in from file
-            with open(filename_base + ".siqd", "rb") as f:
-                d = np.frombuffer(f.read(), dtype=np.float32)
-
-        # Deinterleave I and Q
-        i = d[0:-1:2]
-        q = np.append(d[1:-1:2], d[-1])
-        # Re-interleave as numpy complex64)
-        iq_data = i + 1j * q
-        assert iq_data.dtype == np.complex64
-
-        if return_status:
-            return iq_data, iq_status
-        else:
-            return iq_data
+        # Retrieve IQ data (and, optionally, status message)
+        return self.IQSTREAM_Tempfile_NoConfig(duration_msec, return_status)
 
     @staticmethod
     def IQSTREAMFileInfo_StatusParser(
