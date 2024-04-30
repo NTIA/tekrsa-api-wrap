@@ -2226,6 +2226,7 @@ class RSA:
             self.IQSTREAM_Start()
             sleep_time = (duration_msec + 1) / 1000
             logger.debug(f"Started IQ stream. Sleeping for {sleep_time}")
+            sleep(sleep_time)
             complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
             logger.debug(f"File write complete: {complete}")
             while not complete:
