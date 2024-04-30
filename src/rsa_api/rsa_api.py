@@ -580,8 +580,9 @@ class RSA:
         """
         src = RSA.check_string(src)
         if src in _FREQ_REF_SOURCE:
-            if src == "GNSS" and self.DEVICE_GetNomenclature() in ["RSA306", "RSA306B"]:
-                raise RSAError("RSA 300 series device does not support GNSS reference.")
+            device_name = self.DEVICE_GetNomenclature()
+            if src == "GNSS" and device_name in ["RSA306", "RSA306B"]:
+                raise RSAError(f"{device_name} device does not support GNSS reference.")
             else:
                 value = c_int(_FREQ_REF_SOURCE.index(src))
                 self.err_check(self.rsa.CONFIG_SetFrequencyReferenceSource(value))
