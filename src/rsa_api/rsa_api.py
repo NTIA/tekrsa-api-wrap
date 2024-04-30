@@ -56,7 +56,7 @@ class _DeviceInfo(Structure):
         ("apiVersion", c_char * _DEVINFO_MAX_STRLEN),
         ("fwVersion", c_char * _DEVINFO_MAX_STRLEN),
         ("fpgaVersion", c_char * _DEVINFO_MAX_STRLEN),
-        ("hwversion", c_char * _DEVINFO_MAX_STRLEN),
+        ("hwVersion", c_char * _DEVINFO_MAX_STRLEN),
     ]
 
 
@@ -65,10 +65,7 @@ class _FreqRefUserInfo(Structure):
         ("isvalid", c_bool),
         ("dacValue", c_uint32),
         ("datetime", c_char * _DEVINFO_MAX_STRLEN),
-        (
-            "temperature",
-            c_double,
-        ),  # Documentation indicates this field exists. Testing indicates otherwise.
+        ("temperature", c_double),
     ]
 
 
@@ -81,8 +78,8 @@ class _SpectrumLimits(Structure):
         ("maxVBW", c_double),
         ("minVBW", c_double),
         ("maxTraceLength", c_int),  # Incorrectly documented as a double
-        ("minTraceLength", c_int),
-    ]  # Incorrectly documented as a double
+        ("minTraceLength", c_int),  # Incorrectly documented as a double
+    ]
 
 
 class _SpectrumSettings(Structure):
@@ -91,9 +88,9 @@ class _SpectrumSettings(Structure):
         ("rbw", c_double),
         ("enableVBW", c_bool),
         ("vbw", c_double),
-        ("traceLength", c_int),
-        ("window", c_int),
-        ("verticalUnit", c_int),
+        ("traceLength", c_int),  # Must be an odd number
+        ("window", c_int),  # Really a SpectrumWindows enum value
+        ("verticalUnit", c_int),  # Really a SpectrumVerticalUnits enum value
         ("actualStartFreq", c_double),
         ("actualStopFreq", c_double),
         ("actualFreqStepSize", c_double),
@@ -104,7 +101,10 @@ class _SpectrumSettings(Structure):
 
 
 class _SpectrumTraceInfo(Structure):
-    _fields_ = [("timestamp", c_int64), ("acqDataStatus", c_uint16)]
+    _fields_ = [
+        ("timestamp", c_uint64),
+        ("acqDataStatus", c_uint16),
+    ]
 
 
 class _IQBlkAcqInfo(Structure):
@@ -116,7 +116,7 @@ class _IQBlkAcqInfo(Structure):
     ]
 
 
-class _IQStreamFileInfo(Structure):
+class _IQStreamFileInfo(Structure):  # "IQSTRMFILEINFO" in RSA_API.h
     _fields_ = [
         ("numberSamples", c_uint64),
         ("sample0Timestamp", c_uint64),
@@ -127,7 +127,7 @@ class _IQStreamFileInfo(Structure):
     ]
 
 
-class _IQStreamIQInfo(Structure):
+class _IQStreamIQInfo(Structure):  # "IQSTRMIQINFO" in RSA_API.h
     _fields_ = [
         ("timestamp", c_uint64),
         ("triggerCount", c_int),
@@ -908,12 +908,12 @@ class RSA:
         dev_info = _DeviceInfo()
         self.err_check(self.rsa.DEVICE_GetInfo(byref(dev_info)))
         info = {
-            "nomenclature": dev_info.nomenclature.value,
-            "serialNum": dev_info.serialNum.value,
-            "apiVersion": dev_info.apiVersion.value,
-            "fwVersion": dev_info.fwVersion.value,
-            "fpgaVersion": dev_info.fpgaVersion.value,
-            "hwVersion": dev_info.hwVersion.value,
+            "nomenclature": dev_info.nomenclature.decode("utf-8"),
+            "serialNum": dev_info.serialNum.decode("utf-8"),
+            "apiVersion": dev_info.apiVersion.decode("utf-8"),
+            "fwVersion": dev_info.fwVersion.decode("utf-8"),
+            "fpgaVersion": dev_info.fpgaVersion.decode("utf-8"),
+            "hwVersion": dev_info.hwVersion.decode("utf-8"),
         }
         return info
 
