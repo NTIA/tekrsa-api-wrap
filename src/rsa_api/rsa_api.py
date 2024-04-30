@@ -16,18 +16,13 @@ import numpy as np
 logger = logging.getLogger(__name__)
 # GLOBAL CONSTANTS
 
-_MAX_NUM_DEVICES = 10  # Max num. of devices that could be found
-_MAX_SERIAL_STRLEN = 8  # Bytes allocated for serial number string
-_MAX_DEVTYPE_STRLEN = 8  # Bytes allocated for device type string
-_FPGA_VERSION_STRLEN = 6  # Bytes allocated for FPGA version number string
-_FW_VERSION_STRLEN = 6  # Bytes allocated for FW version number string
-_HW_VERSION_STRLEN = 4  # Bytes allocated for HW version number string
-_NOMENCLATURE_STRLEN = 8  # Bytes allocated for device nomenclature string
-_API_VERSION_STRLEN = 8  # Bytes allocated for API version number string
+_DEVSRCH_MAX_NUM_DEVICES = 20  # Max num. of devices that could be found
+_DEVSRCH_SERIAL_MAX_STRLEN = 100  # Char array size allocated for serial number string
+_DEVSRCH_TYPE_MAX_STRLEN = 20  # Char array size allocated for device type string
+_DEVINFO_MAX_STRLEN = 100  # Char array max size to allocate for DEVICE_Get* functions
 _FREQ_REF_USER_SETTING_STRLEN = (
     200  # Max. characters in frequency reference user setting string
 )
-_DEVINFO_MAX_STRLEN = 100  # Datetime substring length in user setting string
 
 # ENUMERATION TUPLES
 
@@ -52,6 +47,17 @@ _TRIGGER_SOURCE = ("External", "IFPowerLevel")
 _TRIGGER_TRANSITION = ("LH", "HL", "Either")
 
 # CUSTOM DATA STRUCTURES
+
+
+class _DeviceInfo(Structure):
+    _fields_ = [
+        ("nomenclature", c_char * _DEVINFO_MAX_STRLEN),
+        ("serialNum", c_char * _DEVINFO_MAX_STRLEN),
+        ("apiVersion", c_char * _DEVINFO_MAX_STRLEN),
+        ("fwVersion", c_char * _DEVINFO_MAX_STRLEN),
+        ("fpgaVersion", c_char * _DEVINFO_MAX_STRLEN),
+        ("hwversion", c_char * _DEVINFO_MAX_STRLEN),
+    ]
 
 
 class _FreqRefUserInfo(Structure):
@@ -814,7 +820,7 @@ class RSA:
         string
             The FPGA version number.
         """
-        fpga_version = (c_char * _FPGA_VERSION_STRLEN)()
+        fpga_version = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFPGAVersion(byref(fpga_version)))
         return fpga_version.value.decode("utf-8")
 
@@ -827,7 +833,7 @@ class RSA:
         string
             The firmware version number.
         """
-        fw_version = (c_char * _FW_VERSION_STRLEN)()
+        fw_version = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetFWVersion(byref(fw_version)))
         return fw_version.value.decode("utf-8")
 
@@ -840,7 +846,7 @@ class RSA:
         string
             The hardware version number.
         """
-        hw_version = (c_char * _HW_VERSION_STRLEN)()
+        hw_version = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetHWVersion(byref(hw_version)))
         return hw_version.value.decode("utf-8")
 
@@ -853,7 +859,7 @@ class RSA:
         string
             Name of the device.
         """
-        nomenclature = (c_char * _NOMENCLATURE_STRLEN)()
+        nomenclature = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetNomenclature(byref(nomenclature)))
         return nomenclature.value.decode("utf-8")
 
@@ -866,7 +872,7 @@ class RSA:
         string
             Serial number of the device.
         """
-        serial_num = (c_char * _MAX_SERIAL_STRLEN)()
+        serial_num = (c_char * _DEVSRCH_SERIAL_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetSerialNumber(byref(serial_num)))
         return serial_num.value.decode("utf-8")
 
@@ -879,7 +885,7 @@ class RSA:
         string
             The API version number.
         """
-        api_version = (c_char * _API_VERSION_STRLEN)()
+        api_version = (c_char * _DEVINFO_MAX_STRLEN)()
         self.err_check(self.rsa.DEVICE_GetAPIVersion(byref(api_version)))
         return api_version.value.decode("utf-8")
 
@@ -899,19 +905,15 @@ class RSA:
             Keys: nomenclature, serialNum, fwVersion, fpgaVersion,
                   hwVersion, apiVersion
         """
-        nomenclature = self.DEVICE_GetNomenclature()
-        serial_num = self.DEVICE_GetSerialNumber()
-        fw_version = self.DEVICE_GetFWVersion()
-        fpga_version = self.DEVICE_GetFPGAVersion()
-        hw_version = self.DEVICE_GetHWVersion()
-        api_version = self.DEVICE_GetAPIVersion()
+        dev_info = _DeviceInfo()
+        self.err_check(self.DEVICE_GetInfo(byref(dev_info)))
         info = {
-            "nomenclature": nomenclature,
-            "serialNum": serial_num,
-            "fwVersion": fw_version,
-            "fpgaVersion": fpga_version,
-            "hwVersion": hw_version,
-            "apiVersion": api_version,
+            "nomenclature": dev_info.nomenclature.value,
+            "serialNum": dev_info.serialNum.value,
+            "apiVersion": dev_info.apiVersion.value,
+            "fwVersion": dev_info.fwVersion.value,
+            "fpgaVersion": dev_info.fpgaVersion.value,
+            "hwVersion": dev_info.hwVersion.value,
         }
         return info
 
@@ -977,9 +979,11 @@ class RSA:
             If no devices are found.
         """
         num_found = c_int()
-        dev_ids = (c_int * _MAX_NUM_DEVICES)()
-        dev_serial = ((c_char * _MAX_NUM_DEVICES) * _MAX_SERIAL_STRLEN)()
-        dev_type = ((c_char * _MAX_NUM_DEVICES) * _MAX_DEVTYPE_STRLEN)()
+        dev_ids = (c_int * _DEVSRCH_MAX_NUM_DEVICES)()
+        dev_serial = (
+            (c_char * _DEVSRCH_MAX_NUM_DEVICES) * _DEVSRCH_SERIAL_MAX_STRLEN
+        )()
+        dev_type = ((c_char * _DEVSRCH_MAX_NUM_DEVICES) * _DEVSRCH_TYPE_MAX_STRLEN)()
 
         self.err_check(
             self.rsa.DEVICE_Search(
