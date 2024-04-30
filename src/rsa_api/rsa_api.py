@@ -3,6 +3,7 @@ Written for Tektronix RSA API for Linux v1.0.0014
 Refer to the RSA API Programming Reference Manual for details
 on any functions implemented from this module.
 """
+
 import logging
 import tempfile
 from ctypes import *
@@ -143,7 +144,7 @@ class _IQStreamIQInfo(Structure):  # "IQSTRMIQINFO" in RSA_API.h
 class RSAError(Exception):
     def __init__(self, err_txt=""):
         self.err_txt = err_txt
-        err = "RSA Error: {}".format(self.err_txt)
+        err = f"RSA Error: {self.err_txt}"
         super().__init__(err)
 
 

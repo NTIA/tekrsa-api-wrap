@@ -2,6 +2,7 @@
 This is a test for the entire API Wrapper.
 It requires a compatible RSA device to be connected.
 """
+
 import unittest
 from os import environ, mkdir
 from os.path import isdir
