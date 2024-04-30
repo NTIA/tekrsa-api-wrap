@@ -10,8 +10,10 @@ from os.path import abspath, join
 from time import sleep
 from typing import Any, Tuple, Union
 
+import logging
 import numpy as np
 
+logger = logging.getLogger(__name__)
 # GLOBAL CONSTANTS
 
 _MAX_NUM_DEVICES = 10  # Max num. of devices that could be found
@@ -530,7 +532,13 @@ class RSA:
         self.err_check(
             self.rsa.CONFIG_DecodeFreqRefUserSettingString(i_usstr, byref(o_fui))
         )
-
+        try:
+            logger.debug(f"FreqRefUserInfo.isvalid {o_fui.isvalid}")
+            logger.debug(f"FreqRefUserInfo.dacValue {o_fui.dacValue}")
+            logger.debug(f"FreqRefUserInfo.datetime: {o_fui.datetime}")
+            logger.debug(f"FreqRefUserInfo.temperature: {o_fui.temperature}")
+        except Exception as ex:
+            logger.debug(f"unable to print decoded values: {ex}")
 
         fui = {
             "isvalid": o_fui.isvalid,
@@ -2216,13 +2224,22 @@ class RSA:
 
             self.DEVICE_Run()
             self.IQSTREAM_Start()
+            sleep_time = (duration_msec + 1) / 1000
+            logger.debug(f"Started IQ stream. Sleeping for {sleep_time}")
+            complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
+            logger.debug(f"File write complete: {complete}")
             while not complete:
+                logger.debug(f"Sleeping for {sleep_time_sec}")
                 sleep(sleep_time_sec)
                 complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
+                logger.debug(f"File write complete: {complete}")
+            logger.debug("Stopping stream.")
             self.IQSTREAM_Stop()
 
             # Check acquisition status
             file_info = self.IQSTREAM_GetDiskFileInfo()
+            logger.debug(f"Status: {file_info.acqStatus}")
+            logger.debug(f"Filename: {file_info.filenames.contents.value}")
             iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
 
             self.DEVICE_Stop()
