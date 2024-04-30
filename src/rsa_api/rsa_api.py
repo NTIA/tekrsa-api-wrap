@@ -906,7 +906,7 @@ class RSA:
                   hwVersion, apiVersion
         """
         dev_info = _DeviceInfo()
-        self.err_check(self.DEVICE_GetInfo(byref(dev_info)))
+        self.err_check(self.rsa.DEVICE_GetInfo(byref(dev_info)))
         info = {
             "nomenclature": dev_info.nomenclature.value,
             "serialNum": dev_info.serialNum.value,
