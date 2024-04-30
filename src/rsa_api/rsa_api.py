@@ -3,6 +3,7 @@ Written for Tektronix RSA API for Linux v1.0.0014
 Refer to the RSA API Programming Reference Manual for details
 on any functions implemented from this module.
 """
+
 import logging
 import tempfile
 from ctypes import *
