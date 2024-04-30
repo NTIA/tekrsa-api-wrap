@@ -557,7 +557,7 @@ class rsa_api_test(unittest.TestCase):
     #         trace="Trace1", trace_points=traceLength
     #     )
     #     self.assertEqual(len(spectrum), traceLength)
-    #     self.assertIsInstance(spectrum, np.ndarray)s
+    #     self.assertIsInstance(spectrum, np.ndarray)
     #     self.assertRaises(TypeError, self.rsa.SPECTRUM_Acquire, trace=1)
 
     #     traceInfo = self.rsa.SPECTRUM_GetTraceInfo()
