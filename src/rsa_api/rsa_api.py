@@ -3,6 +3,7 @@ Written for Tektronix RSA API for Linux v1.0.0014
 Refer to the RSA API Programming Reference Manual for details
 on any functions implemented from this module.
 """
+import logging
 import tempfile
 from ctypes import *
 from enum import Enum
@@ -10,7 +11,6 @@ from os.path import abspath, join
 from time import sleep
 from typing import Any, Tuple, Union
 
-import logging
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -2271,7 +2271,9 @@ class RSA:
     ) -> Union[np.ndarray, Tuple[np.ndarray, str]]:
         """
         Retrieve IQ data from device by first writing to a tempfile.
-        Performs device configuration before capturing.
+        Tunes device parameters before recording: center frequency,
+        reference level, and IQ bandwidth. Does not adjust preamp
+        or attenuation settings for RSA500/600 devices.
 
         Parameters
         ----------
@@ -2296,62 +2298,16 @@ class RSA:
             The status code for the IQ capture, as defined in
             the documentation for IQSTREAMFileInfo_StatusParser().
         """
-        # Configuration parameters
-        dest = _IQS_OUT_DEST[3]  # Split SIQ format
-        dtype = _IQS_OUT_DTYPE[0]  # 32-bit single precision floating point
-        suffix_ctl = -2  # No file suffix
-        filename = "tempIQ"
-        sleep_time_sec = 0.05  # Loop sleep time checking if acquisition complete
+        logger.warning(
+            "IQSTREAM_Tempfile is not recommended! Use IQSTREAM_Tempfile_NoConfig instead."
+        )
+        # Configure the device: tune frequency and
+        self.CONFIG_SetCenterFreq(cf)
+        self.CONFIG_SetReferenceLevel(ref_level)
+        self.IQSTREAM_SetAcqBandwidth(bw)
 
-        # Ensure device is stopped before proceeding
-        self.DEVICE_Stop()
-
-        # Create temp directory and configure/collect data
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            filename_base = tmp_dir + "/" + filename
-
-            # Configure device
-            self.CONFIG_SetCenterFreq(cf)
-            self.CONFIG_SetReferenceLevel(ref_level)
-            self.IQSTREAM_SetAcqBandwidth(bw)
-            self.IQSTREAM_SetOutputConfiguration(dest, dtype)
-            self.IQSTREAM_SetDiskFilenameBase(filename_base)
-            self.IQSTREAM_SetDiskFilenameSuffix(suffix_ctl)
-            self.IQSTREAM_SetDiskFileLength(duration_msec)
-            self.IQSTREAM_ClearAcqStatus()
-            self.DEVICE_PrepareForRun()
-
-            # Collect data
-            complete = False
-
-            self.DEVICE_Run()
-            self.IQSTREAM_Start()
-            while not complete:
-                sleep(sleep_time_sec)
-                complete = self.IQSTREAM_GetDiskFileWriteStatus()[0]
-            self.IQSTREAM_Stop()
-
-            # Check acquisition status
-            file_info = self.IQSTREAM_GetDiskFileInfo()
-            iq_status = self.IQSTREAMFileInfo_StatusParser(file_info, not return_status)
-
-            self.DEVICE_Stop()
-
-            # Read data back in from file
-            with open(filename_base + ".siqd", "rb") as f:
-                d = np.frombuffer(f.read(), dtype=np.float32)
-
-        # Deinterleave I and Q
-        i = d[0:-1:2]
-        q = np.append(d[1:-1:2], d[-1])
-        # Re-interleave as numpy complex64)
-        iq_data = i + 1j * q
-        assert iq_data.dtype == np.complex64
-
-        if return_status:
-            return iq_data, iq_status
-        else:
-            return iq_data
+        # Retrieve IQ data (and, optionally, status message)
+        return self.IQSTREAM_Tempfile_NoConfig(duration_msec, return_status)
 
     @staticmethod
     def IQSTREAMFileInfo_StatusParser(
