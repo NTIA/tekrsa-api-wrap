@@ -7,7 +7,7 @@ name = "tekrsa-api-wrap"
 dynamic = ["version"]
 description = "NTIA/ITS Python wrapper for the Tektronix RSA API for Linux"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { file = "LICENSE.md" }
 
 authors = [
@@ -31,22 +31,22 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [
-    "numpy>=1.22",
+    "numpy>=1.25",
 ]
 
 [project.optional-dependencies]
 dev = [
     "hatchling>=1.6.0,<2.0",
-    "pre-commit>=2.20.0",
-    "twine>=4.0.1,<5.0",
+    "pre-commit>=4.0,<5.0",
+    "twine>=5.0,<6.0",
 ]
 
 [project.urls]

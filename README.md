@@ -33,7 +33,7 @@ instead of using this wrapper.
 
 ## Installation
 
-Requires `python>=3.8`, `numpy>=1.22`, and the Tektronix RSA API for Linux.
+Requires `python>=3.9`, `numpy>=1.25`, and the Tektronix RSA API for Linux.
 
 First, download and install the
 [RSA API for Linux](https://www.tek.com/spectrum-analyzer/rsa306-software/rsa-application-programming-interface--api-for-64bit-linux--v100014)
@@ -128,7 +128,7 @@ as errors and handled as configured in `IQSTREAM_StatusParser`.
 
 Set up a development environment using a tool like
 [Conda](https://docs.conda.io/en/latest/)
-or [venv](https://docs.python.org/3/library/venv.html#module-venv), with `python>=3.8`.
+or [venv](https://docs.python.org/3/library/venv.html#module-venv).
 Then, from the cloned directory, install the development dependencies by running:
 
 ```bash
