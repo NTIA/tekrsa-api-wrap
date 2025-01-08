@@ -14,10 +14,6 @@ authors = [
     { name = "The Institute for Telecommunication Sciences" },
 ]
 
-maintainers = [
-    { name="Anthony Romaniello", email="aromaniello@ntia.gov"},
-]
-
 keywords = [
     "API", "wrapper", "spectrum", "analyzer", "SDR", "RF",
     "SCOS", "Linux", "Tektronix", "RSA", "radio",
