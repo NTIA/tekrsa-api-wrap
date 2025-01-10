@@ -202,7 +202,7 @@ Microsoft and Windows are trademarks of the Microsoft group of companies.
 
 ## Contact
 
-For technical questions, contact Anthony Romaniello, <aromaniello@ntia.gov>
+For technical questions, contact [the ITS Spectrum Monitoring Team](mailto:spectrummonitoring@ntia.gov).
 
 ## Disclaimer
 
